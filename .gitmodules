@@ -1,0 +1,3 @@
+[submodule "graphics/extern/glfw"]
+	path = graphics/extern/glfw
+	url = https://github.com/ebanjo-2/glfw.git
