@@ -1,5 +1,6 @@
 #include "iostream"
 
+#include "debug.h"
 #include "undicht_graphics.h"
 
 using namespace undicht;
@@ -12,7 +13,9 @@ int main() {
     Window window("Hello World");
 
     GraphicsAPI graphics_api;
-    std::cout << "Hello World\n";
+    GraphicsDevice gpu = graphics_api.getGraphicsDevice();
+
+    UND_LOG << "using gpu: " << gpu.info() << "\n";
 
     while(!window.shouldClose()) {
 

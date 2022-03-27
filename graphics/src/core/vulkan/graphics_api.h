@@ -5,6 +5,8 @@
 
 #include "vulkan_declaration.h"
 
+#include "graphics_device.h"
+
 namespace undicht {
 
     namespace graphics {
@@ -20,7 +22,15 @@ namespace undicht {
             GraphicsAPI();
             ~GraphicsAPI();
 
+            uint32_t getGraphicsDeviceCount() const;
+            GraphicsDevice getGraphicsDevice(bool choose_best = true, uint32_t id = 0) const;
+
             std::string info() const;
+
+          private:
+
+            uint32_t rateDevice(vk::PhysicalDevice* device) const;
+
         };
 
     } // namespace graphics

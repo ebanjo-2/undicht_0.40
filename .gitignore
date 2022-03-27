@@ -1,5 +1,9 @@
 # build directory
 build/
+cmake-build-debug/
+
+# ide directories
+.idea/
 
 # .bak files
 *.bak

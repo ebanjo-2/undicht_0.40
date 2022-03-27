@@ -10,3 +10,4 @@
 // source files that need vulkan.hpp
 // dont add these to the project!!!
 #include "core/vulkan/graphics_api.cpp"
+#include "core/vulkan/graphics_device.cpp"

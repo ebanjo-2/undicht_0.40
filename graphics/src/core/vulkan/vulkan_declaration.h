@@ -6,7 +6,8 @@
 namespace vk {
 
     class Instance;
-
+    class Device;
+    class PhysicalDevice;
 
 }
 

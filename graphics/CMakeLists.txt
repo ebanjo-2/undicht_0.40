@@ -5,6 +5,7 @@ set(GRAPHICS_CORE_SOURCES
     src/core/vulkan/vulkan_implementation.cpp
 
     src/core/vulkan/graphics_api.h
+    src/core/vulkan/graphics_device.h
 )
 
 set(GRAPHICS_WINDOW_SOURCES
