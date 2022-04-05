@@ -5,7 +5,7 @@
 
 // this is the only include of vulkan.hpp in the project that does anything
 // (other includes are only there to convince the ide that everything is fine)
-#include "vulkan/vulkan.hpp"
+#include "vulkan_pch.hpp"
 
 // source files that need vulkan.hpp
 // dont add these to the project!!!

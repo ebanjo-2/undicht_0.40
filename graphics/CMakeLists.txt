@@ -1,5 +1,9 @@
 
+find_package(Vulkan REQUIRED)
+
 set(GRAPHICS_CORE_SOURCES
+
+    src/core/vulkan/vulkan_pch.hpp
 
     src/core/vulkan/vulkan_declaration.h
     src/core/vulkan/vulkan_implementation.cpp
@@ -26,6 +30,7 @@ add_library(graphics
 
     ${GRAPHICS_WINDOW_SOURCES}
     ${GRAPHICS_CORE_SOURCES}
+    ${Vulkan_INCLUDE_DIRS}/vulkan/vulkan.hpp
 )
 
 target_include_directories(graphics PUBLIC src)
@@ -41,6 +46,6 @@ add_subdirectory(extern/glfw)
 target_link_libraries(graphics glfw)
 
 # linking vulkan
-find_package(Vulkan REQUIRED)
 target_include_directories(graphics PRIVATE ${Vulkan_INCLUDE_DIRS})
 target_link_libraries(graphics ${Vulkan_LIBRARIES})
+target_precompile_headers(graphics PUBLIC "src/core/vulkan/vulkan_pch.hpp")

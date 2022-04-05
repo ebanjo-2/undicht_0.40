@@ -4,6 +4,8 @@ cmake-build-debug/
 
 # ide directories
 .idea/
+.cache/
+.swp
 
 # .bak files
 *.bak

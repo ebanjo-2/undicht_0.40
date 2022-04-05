@@ -15,10 +15,17 @@ namespace undicht {
 
           private:
 
+            friend GraphicsAPI;
+
+
             vk::PhysicalDevice* m_physical_device = 0;
             vk::Device * m_device = 0;
 
-            friend GraphicsAPI; 
+            struct {
+                uint32_t graphics_queue;
+                uint32_t present_queue;
+            } m_queues;
+
 
             // only the graphics api can create GraphicsDevice objects
             GraphicsDevice(vk::PhysicalDevice device);
@@ -28,6 +35,11 @@ namespace undicht {
             ~GraphicsDevice();
 
             std::string info() const;
+
+          private:
+
+            bool findQueueFamilies();
+
         };
 
     } // namespace graphics

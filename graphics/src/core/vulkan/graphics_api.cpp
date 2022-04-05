@@ -4,6 +4,10 @@
 #include "vulkan/vulkan.hpp"
 #include "GLFW/glfw3.h"
 
+#include <stdint.h>
+
+#include "debug.h"
+
 namespace undicht {
 
     namespace graphics {
@@ -21,7 +25,7 @@ namespace undicht {
             // instance create structs
             vk::ApplicationInfo app_info("undicht");
             vk::InstanceCreateInfo create_info({}, &app_info, layer_count, &layers, ext_count, extns);
-            
+
             // creating the instance
             m_instance = new vk::Instance;
             *m_instance = vk::createInstance(create_info);
@@ -38,19 +42,14 @@ namespace undicht {
         }
 
         uint32_t GraphicsAPI::getGraphicsDeviceCount() const {
-            
-            uint32_t count;
-            m_instance->enumeratePhysicalDevices(&count, 0);
 
-            return count;
+            return m_instance->enumeratePhysicalDevices().size();
         }
 
         GraphicsDevice GraphicsAPI::getGraphicsDevice(bool choose_best, uint32_t id) const {
 
             // getting the available devices
-            uint32_t device_count = getGraphicsDeviceCount();
-            std::vector<vk::PhysicalDevice> devices(device_count);
-            m_instance->enumeratePhysicalDevices(&device_count, devices.data());
+            std::vector<vk::PhysicalDevice> devices = m_instance->enumeratePhysicalDevices();
 
             if(choose_best) {
                 // rating the devices
@@ -75,6 +74,12 @@ namespace undicht {
             }
 
         }
+
+        uint32_t GraphicsAPI::rateDevice(const GraphicsDevice& device) const {
+
+            return rateDevice(device.m_physical_device);
+        }
+
 
         std::string GraphicsAPI::info() const {
 
@@ -101,6 +106,7 @@ namespace undicht {
             // Application can't function without geometry shaders
             if (!features.geometryShader)
                 return 0;
+
 
             return score;
         }

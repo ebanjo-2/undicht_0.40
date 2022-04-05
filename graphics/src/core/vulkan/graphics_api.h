@@ -25,6 +25,8 @@ namespace undicht {
             uint32_t getGraphicsDeviceCount() const;
             GraphicsDevice getGraphicsDevice(bool choose_best = true, uint32_t id = 0) const;
 
+            uint32_t rateDevice(const GraphicsDevice& device) const;
+
             std::string info() const;
 
           private:
