@@ -53,8 +53,8 @@ namespace undicht {
 
             if(choose_best) {
                 // rating the devices
-                uint32_t best = 0;
-                uint32_t best_score = 0;
+                uint32_t best = 0; // id of the best device
+                uint32_t best_score = 0; // score of the best device
 
                 for(int i = 0; i < devices.size(); i++) {
 
@@ -69,7 +69,7 @@ namespace undicht {
                 // choosing the best
                 return GraphicsDevice(devices.at(best));
             } else {
-
+				// returning the requested device
                 return GraphicsDevice(devices.at(id));
             }
 

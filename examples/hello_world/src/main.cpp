@@ -15,7 +15,7 @@ int main() {
     GraphicsAPI graphics_api;
     GraphicsDevice gpu = graphics_api.getGraphicsDevice();
 
-    
+	UND_LOG << "started engine\n";	
     UND_LOG << "using gpu: " << gpu.info() << " score: " << graphics_api.rateDevice(gpu) << "\n";
 
     while(!window.shouldClose()) {
@@ -23,5 +23,5 @@ int main() {
         window.update();
     }
 
-    return 0;
+    return -1;
 }

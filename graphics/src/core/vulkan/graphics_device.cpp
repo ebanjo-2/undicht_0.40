@@ -1,7 +1,11 @@
+#include "graphics_device.h"
+
+#include <set>
+#include <vector>
+
 #include "vulkan/vulkan.hpp"
 
 #include "debug.h"
-#include "graphics_device.h"
 
 namespace undicht {
 
@@ -15,18 +19,25 @@ namespace undicht {
             // getting queue family ids
             if(!findQueueFamilies())
                 UND_ERROR << "failed to find the necessary queue families \n";
+			
+			// only requesting unique queue ids
+			std::set<uint32_t> queue_familiy_ids = {m_queues.graphics_queue}; // , m_queues.present_queue};
+			std::vector<vk::DeviceQueueCreateInfo> queue_infos;
+
+			float priority = 0.1f; // queue priority
+
+			for(const uint32_t& id : queue_familiy_ids) {
+
+				queue_infos.emplace_back(vk::DeviceQueueCreateInfo({}, id, 1, &priority));
+			}
+
 
             // specifying which device features are required
-            //vk::	
+	   		vk::PhysicalDeviceFeatures features;
 
             // creating the logical device
             m_device = new vk::Device;
-	    
-	        float priority = 1.0f; // info about the queue families the device will use
-	        vk::DeviceQueueCreateInfo graphics_queue_info({}, m_queues.graphics_queue, 1,&priority);
-
-	        vk::DeviceCreateInfo info({}, 1,&graphics_queue_info);                                                        
-
+	        vk::DeviceCreateInfo info({}, queue_infos.size(), queue_infos.data(), 0, {}, 0, {}, &features);                                                        
             *m_device = m_physical_device->createDevice(info);
         }
 
