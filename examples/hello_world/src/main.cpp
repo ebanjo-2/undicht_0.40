@@ -13,9 +13,11 @@ int main() {
     Window window("Hello World");
 
     GraphicsAPI graphics_api;
-    GraphicsDevice gpu = graphics_api.getGraphicsDevice();
+    GraphicsSurface canvas = graphics_api.createGraphicsSurface(window);
+    GraphicsDevice gpu = graphics_api.getGraphicsDevice(canvas);
+	SwapChain swap_chain = graphics_api.createSwapChain(gpu, canvas);
 
-	UND_LOG << "started engine\n";	
+	UND_LOG << "using graphics api: vulkan\n";	
     UND_LOG << "using gpu: " << gpu.info() << " score: " << graphics_api.rateDevice(gpu) << "\n";
 
     while(!window.shouldClose()) {
@@ -23,5 +25,5 @@ int main() {
         window.update();
     }
 
-    return -1;
+    return 0;
 }

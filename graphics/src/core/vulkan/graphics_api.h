@@ -5,7 +5,10 @@
 
 #include "vulkan_declaration.h"
 
+#include "window/glfw/window.h"
 #include "graphics_device.h"
+#include "graphics_surface.h"
+#include "swap_chain.h"
 
 namespace undicht {
 
@@ -21,17 +24,31 @@ namespace undicht {
 
             GraphicsAPI();
             ~GraphicsAPI();
+			
+            std::string info() const;
+
+          public:
+			// creating a graphics device
 
             uint32_t getGraphicsDeviceCount() const;
-            GraphicsDevice getGraphicsDevice(bool choose_best = true, uint32_t id = 0) const;
+            GraphicsDevice getGraphicsDevice(GraphicsSurface& surface, bool choose_best = true, uint32_t id = 0) const;
 
             uint32_t rateDevice(const GraphicsDevice& device) const;
-
-            std::string info() const;
 
           private:
 
             uint32_t rateDevice(vk::PhysicalDevice* device) const;
+			bool findQueueFamilies(vk::PhysicalDevice* device, vk::SurfaceKHR* surface, QueueFamilyIDs& ids) const;			
+			bool checkDeviceExtensions(vk::PhysicalDevice* device) const;
+		  public:
+			// creating a graphics surface
+			
+			GraphicsSurface createGraphicsSurface(const Window& window);
+
+		  public:
+			// creating a swap chain
+			
+			SwapChain createSwapChain(GraphicsDevice& device, GraphicsSurface& surface) const;
 
         };
 

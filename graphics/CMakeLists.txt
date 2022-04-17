@@ -1,6 +1,9 @@
 
 find_package(Vulkan REQUIRED)
 
+# .cpp files including vulkan.hpp should not be added to this
+# compiling vulkan.hpp takes a long time, so it is only included once in vulkan_implementation.cpp
+# .cpp using vulkan.hpp get included (yes, including .cpp files is uncommon) in this file
 set(GRAPHICS_CORE_SOURCES
 
     src/core/vulkan/vulkan_pch.hpp
@@ -10,6 +13,8 @@ set(GRAPHICS_CORE_SOURCES
 
     src/core/vulkan/graphics_api.h
     src/core/vulkan/graphics_device.h
+    src/core/vulkan/graphics_surface.h
+    src/core/vulkan/swap_chain.h
 )
 
 set(GRAPHICS_WINDOW_SOURCES

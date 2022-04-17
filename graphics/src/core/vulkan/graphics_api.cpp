@@ -5,12 +5,20 @@
 #include "GLFW/glfw3.h"
 
 #include <stdint.h>
+#include <vector>
+#include <set>
 
 #include "debug.h"
 
 namespace undicht {
 
     namespace graphics {
+
+
+		const std::vector<const char*> REQUIRED_DEVICE_EXTENSIONS = {
+			VK_KHR_SWAPCHAIN_EXTENSION_NAME
+		};
+
 
         GraphicsAPI::GraphicsAPI() {
 
@@ -41,38 +49,52 @@ namespace undicht {
 
         }
 
+        std::string GraphicsAPI::info() const {
+  
+            return "vulkan";
+        }
+
+
+		//////////////////////////////////// creating a graphics device /////////////////////////
+
         uint32_t GraphicsAPI::getGraphicsDeviceCount() const {
 
             return m_instance->enumeratePhysicalDevices().size();
         }
 
-        GraphicsDevice GraphicsAPI::getGraphicsDevice(bool choose_best, uint32_t id) const {
+        GraphicsDevice GraphicsAPI::getGraphicsDevice(GraphicsSurface& surface, bool choose_best, uint32_t id) const {
 
             // getting the available devices
             std::vector<vk::PhysicalDevice> devices = m_instance->enumeratePhysicalDevices();
+			QueueFamilyIDs queue_families;
 
-            if(choose_best) {
-                // rating the devices
-                uint32_t best = 0; // id of the best device
-                uint32_t best_score = 0; // score of the best device
+			vk::SurfaceKHR* surf = &surface.m_surface->get();
+				
+			if(choose_best) {
+				//determining the best device
+	
+				uint32_t highest_score = 0;
+				int best_device = 0;
 
-                for(int i = 0; i < devices.size(); i++) {
+				for(int i = 0; i < devices.size(); i++) {
+					
+					int score = rateDevice(&devices[i]);
+					score *= findQueueFamilies(&devices[i], surf, queue_families);
+					score *= checkDeviceExtensions(&devices[i]);
 
-                    uint32_t device_score = rateDevice(&devices.at(i));
+					if(score > highest_score) {
+						best_device = i;
+						highest_score = score;
+					}
 
-                    if(device_score > best_score) {
-                        best = i;
-                        best_score = device_score;
-                    }
+				}	
+				// the best device has been found
+			}
 
-                }
-                // choosing the best
-                return GraphicsDevice(devices.at(best));
-            } else {
-				// returning the requested device
-                return GraphicsDevice(devices.at(id));
-            }
+			vk::PhysicalDevice* device = &devices.at(id);
+			findQueueFamilies(device, surf, queue_families);
 
+			return GraphicsDevice(device, surf, &queue_families, REQUIRED_DEVICE_EXTENSIONS);
         }
 
         uint32_t GraphicsAPI::rateDevice(const GraphicsDevice& device) const {
@@ -80,12 +102,7 @@ namespace undicht {
             return rateDevice(device.m_physical_device);
         }
 
-
-        std::string GraphicsAPI::info() const {
-
-            return "vulkan";
-        }
-
+            
         uint32_t GraphicsAPI::rateDevice(vk::PhysicalDevice* device) const {
 
             uint32_t score = 0;
@@ -107,9 +124,65 @@ namespace undicht {
             if (!features.geometryShader)
                 return 0;
 
-
             return score;
         }
+	
+		bool GraphicsAPI::findQueueFamilies(vk::PhysicalDevice* device, vk::SurfaceKHR* surface, QueueFamilyIDs& ids) const{
+			
+			bool graphics_queue = false;
+			bool present_queue = false;
+	
+            std::vector<vk::QueueFamilyProperties> queues = device->getQueueFamilyProperties();				
+	
+            for(int i =  0; i < queues.size(); i++) {
+
+				// graphics queue
+                if((!graphics_queue) && (queues[i].queueFlags & vk::QueueFlagBits::eGraphics)) {
+                    ids.graphics_queue = i;
+                    graphics_queue = true;
+                }
+
+				// present queue
+				vk::Bool32 present_support = false;
+				device->getSurfaceSupportKHR(i, *surface, &present_support);
+
+				if((!present_queue) && present_support) {
+					ids.present_queue = i;
+					present_queue = true;	
+				}
+
+            }
+
+			return graphics_queue && present_queue;
+		}
+
+		bool GraphicsAPI::checkDeviceExtensions(vk::PhysicalDevice* device) const{
+			
+			std::vector<vk::ExtensionProperties> extensions =  device->enumerateDeviceExtensionProperties();
+
+			std::set<std::string> required_extensions(REQUIRED_DEVICE_EXTENSIONS.begin(), REQUIRED_DEVICE_EXTENSIONS.end());
+			
+			// removing all of the available extensions from the ones that are required
+			for(vk::ExtensionProperties& p :extensions)
+				required_extensions.erase(p.extensionName);
+
+
+			return required_extensions.empty();
+		}
+
+		/////////////////////////////// creating a graphics surface //////////////////////////////
+
+        GraphicsSurface GraphicsAPI::createGraphicsSurface(const Window& window) {
+
+			return GraphicsSurface(m_instance, window.m_window);
+		}
+		
+		////////////////////////////////// creating a swap chain //////////////////////////////
+		
+		SwapChain GraphicsAPI::createSwapChain(GraphicsDevice& device, GraphicsSurface& surface) const{
+
+			return SwapChain(device.m_physical_device, &surface.m_surface->get());
+		}
 
     } // namespace  graphics
 

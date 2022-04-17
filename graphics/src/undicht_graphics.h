@@ -14,6 +14,9 @@
 
 #ifdef USE_VULKAN
 #include "core/vulkan/graphics_api.h"
+#include "core/vulkan/graphics_device.h"
+#include "core/vulkan/graphics_surface.h" 
+#include "core/vulkan/swap_chain.h"
 #endif // USE_VULKAN
 
 

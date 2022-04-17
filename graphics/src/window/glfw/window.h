@@ -10,9 +10,13 @@ namespace undicht {
 
     namespace graphics {
 
+		class GraphicsAPI;
+
         class Window {
             
             private:
+
+				friend GraphicsAPI;
 
                 GLFWwindow* m_window = 0;
                 bool m_fullscreen = false;

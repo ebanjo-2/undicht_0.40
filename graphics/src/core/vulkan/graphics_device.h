@@ -2,6 +2,7 @@
 #define GRAPHICS_DEVICE_H
 
 #include "string"
+#include "vector"
 
 #include "vulkan_declaration.h"
 
@@ -9,26 +10,34 @@ namespace undicht {
 
     namespace graphics {
 
+		struct QueueFamilyIDs {
+			uint32_t graphics_queue = 0;
+			uint32_t present_queue = 0;
+		};
+
         class GraphicsAPI;
+		class GraphicsSurface;
 
         class GraphicsDevice {
 
           private:
 
             friend GraphicsAPI;
+			friend GraphicsSurface;
 
 
             vk::PhysicalDevice* m_physical_device = 0;
             vk::Device * m_device = 0;
 
-            struct {
-                uint32_t graphics_queue;
-                uint32_t present_queue;
-            } m_queues;
+         	QueueFamilyIDs m_queue_family_ids;
 
+			struct {
+				vk::Queue* graphics_queue;
+				vk::Queue* present_queue;
+			} m_queues;
 
             // only the graphics api can create GraphicsDevice objects
-            GraphicsDevice(vk::PhysicalDevice device);
+            GraphicsDevice(vk::PhysicalDevice* device, vk::SurfaceKHR* surface, QueueFamilyIDs* queue_families, const std::vector<const char*>& extensions);
 
           public:
 
@@ -38,8 +47,7 @@ namespace undicht {
 
           private:
 
-            bool findQueueFamilies();
-
+			void retrieveQueueHandles();
         };
 
     } // namespace graphics
