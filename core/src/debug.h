@@ -5,7 +5,7 @@
 
 // macros for logging and debugging
 
-#define UND_ERROR std::cout << "ERROR: " <<  " from " << __FILE__ << "\n    "
+#define UND_ERROR std::cout << "ERROR: " <<  " from " << __FILE__ << " : " << __LINE__ << "\n    "
 
 #define UND_WARNING std::cout << "WARNING: " << " from " << __FILE__ << "\n    "
 

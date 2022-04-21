@@ -7,7 +7,7 @@ find_package(Vulkan REQUIRED)
 set(GRAPHICS_CORE_SOURCES
 
     src/core/vulkan/vulkan_pch.hpp
-
+    
     src/core/vulkan/vulkan_declaration.h
     src/core/vulkan/vulkan_implementation.cpp
 
@@ -29,12 +29,23 @@ set(GRAPHICS_WINDOW_SOURCES
     src/window/glfw/window.cpp
 )
 
+set(GRAPHICS_PIPELINE_SOURCES
+
+		src/graphics_pipeline/vulkan/shader.h
+		src/graphics_pipeline/vulkan/renderer.h
+		src/graphics_pipeline/vulkan/render_subpass.h
+
+)
+
 add_library(graphics
 
     src/undicht_graphics.h
-
+    src/graphics_types.h
+		src/graphics_types.cpp
+		
     ${GRAPHICS_WINDOW_SOURCES}
     ${GRAPHICS_CORE_SOURCES}
+		${GRAPHICS_PIPELINE_SOURCES}
     ${Vulkan_INCLUDE_DIRS}/vulkan/vulkan.hpp
 )
 

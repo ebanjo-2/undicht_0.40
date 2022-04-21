@@ -14,9 +14,7 @@
 #include "core/vulkan/graphics_surface.cpp"
 #include "core/vulkan/swap_chain.cpp"
 
-
-
-
-
-
-
+// graphics pipeline files
+#include "graphics_pipeline/vulkan/shader.cpp"
+#include "graphics_pipeline/vulkan/renderer.cpp"
+#include "graphics_pipeline/vulkan/render_subpass.cpp"

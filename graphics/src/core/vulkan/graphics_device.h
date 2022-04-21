@@ -3,8 +3,13 @@
 
 #include "string"
 #include "vector"
+#include "set"
 
 #include "vulkan_declaration.h"
+
+#include "graphics_pipeline/vulkan/shader.h"
+#include "graphics_pipeline/vulkan/renderer.h"
+
 
 namespace undicht {
 
@@ -30,6 +35,7 @@ namespace undicht {
             vk::Device * m_device = 0;
 
          	QueueFamilyIDs m_queue_family_ids;
+			std::set<uint32_t> m_unique_queue_family_ids;
 
 			struct {
 				vk::Queue* graphics_queue;
@@ -44,6 +50,9 @@ namespace undicht {
             ~GraphicsDevice();
 
             std::string info() const;
+
+			Shader createShader() const;
+			Renderer createRenderer() const;
 
           private:
 

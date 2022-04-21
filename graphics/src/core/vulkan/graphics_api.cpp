@@ -14,7 +14,7 @@ namespace undicht {
 
     namespace graphics {
 
-
+		// the extensions a graphics device needs to support
 		const std::vector<const char*> REQUIRED_DEVICE_EXTENSIONS = {
 			VK_KHR_SWAPCHAIN_EXTENSION_NAME
 		};
@@ -180,8 +180,17 @@ namespace undicht {
 		////////////////////////////////// creating a swap chain //////////////////////////////
 		
 		SwapChain GraphicsAPI::createSwapChain(GraphicsDevice& device, GraphicsSurface& surface) const{
+		
+			SwapChain swap_chain(device.m_physical_device, device.m_device, &surface.m_surface->get());
 
-			return SwapChain(device.m_physical_device, &surface.m_surface->get());
+			// determining the size of the swap chain images	
+			swap_chain.setExtent(surface.m_width, surface.m_height);
+
+			// determining the queues that are going to access the swap chain
+
+			swap_chain.m_queue_ids = std::vector<uint32_t>(device.m_unique_queue_family_ids.begin(), device.m_unique_queue_family_ids.end()); 
+			
+			return swap_chain;
 		}
 
     } // namespace  graphics

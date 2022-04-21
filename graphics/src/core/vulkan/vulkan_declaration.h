@@ -10,12 +10,24 @@ namespace vk {
     class Device;
     class PhysicalDevice;
 	class Queue;
-	class SwapChain;
-
+	class SwapchainKHR;
+	class SwapchainCreateInfoKHR;
 	class SurfaceCapabilitiesKHR;
 	class SurfaceFormatKHR;
 	enum class PresentModeKHR;
-	
+	class Extent2D;
+	class Extent3D;
+	class Image;
+	class ImageView;
+	class ShaderModule;
+	class PipelineShaderStageCreateInfo;
+	class PipelineLayout;
+	class AttachmentDescription;
+	class AttachmentReference;
+	class SubpassDescription;
+	class RenderPass;
+	class Pipeline;
+
 	// Unique* types
 	template<typename t1, typename t2>
 	class UniqueHandle;

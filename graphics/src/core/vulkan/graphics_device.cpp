@@ -19,12 +19,12 @@ namespace undicht {
 			m_queue_family_ids = *queue_families;
 
 			// only requesting unique queue ids
-			std::set<uint32_t> queue_familiy_ids = {m_queue_family_ids.graphics_queue, m_queue_family_ids.present_queue};
+			m_unique_queue_family_ids = {m_queue_family_ids.graphics_queue, m_queue_family_ids.present_queue};
 			std::vector<vk::DeviceQueueCreateInfo> queue_infos;
 
 			float priority = 1.0f; // queue priority
 
-			for(const uint32_t& id : queue_familiy_ids) {
+			for(const uint32_t& id : m_unique_queue_family_ids) {
 
 				queue_infos.emplace_back(vk::DeviceQueueCreateInfo({}, id, 1, &priority));
 			}
@@ -66,6 +66,17 @@ namespace undicht {
 
             return properties.deviceName;
         }
+
+		Shader GraphicsDevice::createShader() const {
+
+			return Shader(m_device); 
+		}
+
+		Renderer GraphicsDevice::createRenderer() const {
+
+			return Renderer(m_device);
+		}
+
 
 		void GraphicsDevice::retrieveQueueHandles() {
 			// getting the queue handles from the logical device

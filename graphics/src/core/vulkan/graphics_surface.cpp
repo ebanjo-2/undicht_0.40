@@ -11,6 +11,7 @@ namespace undicht {
 
 		GraphicsSurface::GraphicsSurface(const vk::Instance* instance, GLFWwindow* window) {
 
+			// creating the graphics surface
 			VkSurfaceKHR* tmp = new VkSurfaceKHR;
 
 			if (glfwCreateWindowSurface(*instance, window, nullptr, tmp) != VK_SUCCESS) {
@@ -21,6 +22,9 @@ namespace undicht {
 			m_surface = new vk::UniqueSurfaceKHR(*tmp, *instance);
 			
 			delete tmp;
+
+			// getting the size of the window
+			glfwGetFramebufferSize(window, (int*)&m_width, (int*)&m_height);
 		}
 
 		GraphicsSurface::~GraphicsSurface() {
