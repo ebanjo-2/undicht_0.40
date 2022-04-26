@@ -27,6 +27,11 @@ namespace vk {
 	class SubpassDescription;
 	class RenderPass;
 	class Pipeline;
+	class Framebuffer;
+	class CommandPool;
+	class CommandBuffer;
+	class Semaphore;
+	class Fence;
 
 	// Unique* types
 	template<typename t1, typename t2>

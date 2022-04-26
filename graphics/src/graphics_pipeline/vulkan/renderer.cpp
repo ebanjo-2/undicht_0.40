@@ -7,21 +7,47 @@
 #include "vector"
 #include "tuple"
 
+#include "core/vulkan/graphics_device.h"
 
 namespace undicht {
 
 	namespace graphics {
 		
-		Renderer::Renderer(vk::Device* device) {
+		Renderer::Renderer(const GraphicsDevice* device) {
 			
-			m_device_handle = device;
+			m_device_handle = device->m_device;
+			m_graphics_queue_handle = device->m_queues.graphics_queue;
 			
 			m_layout = new vk::PipelineLayout;
 			m_render_pass = new vk::RenderPass;
 			m_pipeline = new vk::Pipeline;
+
+			m_swap_frame_buffers = new std::vector<vk::Framebuffer>;
+
+			// creating the command pool
+			m_graphics_cmds = new vk::CommandPool;
+			m_cmd_buffer = new vk::CommandBuffer;
+
+			vk::CommandPoolCreateInfo cmd_pool_info(vk::CommandPoolCreateFlagBits::eResetCommandBuffer, device->m_queue_family_ids.graphics_queue);
+			*m_graphics_cmds = m_device_handle->createCommandPool(cmd_pool_info);
 		}
 
 		Renderer::~Renderer() {
+
+			if(m_graphics_cmds) {
+				m_device_handle->destroyCommandPool(*m_graphics_cmds);
+				delete m_graphics_cmds;
+			}
+
+			if(m_cmd_buffer)
+				delete m_cmd_buffer;
+
+			if(m_swap_frame_buffers) {
+				for(vk::Framebuffer fbo : (*m_swap_frame_buffers))
+					m_device_handle->destroyFramebuffer(fbo);
+
+				delete m_swap_frame_buffers;
+			}
 
 			if(m_layout) {
 				m_device_handle->destroyPipelineLayout(*m_layout);
@@ -76,7 +102,9 @@ namespace undicht {
 			std::vector<vk::SubpassDescription> subpasses({*m_subpass.m_description});
 
 			// creating the render pass
-			vk::RenderPassCreateInfo render_pass_info({}, attachments, subpasses);
+			vk::SubpassDependency subpass_dependency(VK_SUBPASS_EXTERNAL, 0, vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlagBits::eNone, vk::AccessFlagBits::eColorAttachmentWrite);
+			std::vector<vk::SubpassDependency> subpass_dependencies({subpass_dependency});
+			vk::RenderPassCreateInfo render_pass_info({}, attachments, subpasses, subpass_dependencies);
 			*m_render_pass = m_device_handle->createRenderPass(render_pass_info);
 
 			// creating the pipeline
@@ -93,14 +121,25 @@ namespace undicht {
 			pipeline_info.setLayout(*m_layout);
 			pipeline_info.setRenderPass(*m_render_pass);
 			pipeline_info.setSubpass(0); // index of the subpass
-			
+				
 			vk::Result result;
 			std::tie(result, *m_pipeline) = m_device_handle->createGraphicsPipeline(nullptr, pipeline_info);
 
 			if(result != vk::Result::eSuccess)
 				UND_ERROR << "failed to create graphics pipeline\n";
 
+			// creating swap chain framebuffers
+			for(int i = 0; i < m_swap_chain_handle->m_image_count; i++) {
+				vk::FramebufferCreateInfo fbo_info({}, *m_render_pass, 1, &m_swap_chain_handle->m_image_views->at(i), m_swap_chain_handle->getWidth(), m_swap_chain_handle->getHeight(), 1);
+				m_swap_frame_buffers->push_back(m_device_handle->createFramebuffer(fbo_info));
 			}
+
+			// creating the command buffer
+			vk::CommandBufferAllocateInfo allocate_info(*m_graphics_cmds, vk::CommandBufferLevel::ePrimary, 1);
+			*m_cmd_buffer = m_device_handle->allocateCommandBuffers(allocate_info)[0];
+
+		}
+
 
 		//////////////////////////////// pipeline settings /////////////////////////////////////
 
@@ -119,6 +158,53 @@ namespace undicht {
 			m_swap_chain_handle = swap_chain;
 		}
 
+		/////////////////////////////////////// drawing /////////////////////////////////////
+
+
+		void Renderer::draw() {
+
+			// getting the framebuffer that gets drawn to
+			int image_index = m_swap_chain_handle->acquireNextImage();
+			vk::Framebuffer* fbo = &m_swap_frame_buffers->at(image_index);
+
+			// viewport size
+			vk::Rect2D render_area({0,0}, {m_swap_chain_handle->getWidth(), m_swap_chain_handle->getHeight()});
+
+			// clear value
+			std::vector<vk::ClearValue> clear_values = {vk::ClearColorValue(std::array<float, 4>({0.0f, 0.0f, 0.0f, 1.0f}))};
+
+			// recording the draw buffer
+			m_cmd_buffer->reset();
+			
+			vk::CommandBufferBeginInfo begin_info({}, nullptr);
+			m_cmd_buffer->begin(begin_info);
+
+			// beginning the render pass
+			vk::RenderPassBeginInfo render_pass_info(*m_render_pass, *fbo, render_area, clear_values);
+			m_cmd_buffer->beginRenderPass(render_pass_info, vk::SubpassContents::eInline);
+
+			// draw commands
+			m_cmd_buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *m_pipeline);
+			m_cmd_buffer->draw(3, 1, 0, 0);
+
+			// ending the render pass
+			m_cmd_buffer->endRenderPass();
+
+			// finishing the draw buffer
+			m_cmd_buffer->end();
+
+
+			// submit the command buffer
+			std::vector<vk::Semaphore> wait_before_draw({*m_swap_chain_handle->m_image_available});
+			std::vector<vk::PipelineStageFlags> wait_stage({vk::PipelineStageFlagBits::eColorAttachmentOutput}); // the stage at which to wait
+			std::vector<vk::CommandBuffer> cmd_buffers({*m_cmd_buffer});
+			std::vector<vk::Semaphore> signal_once_finished({*m_swap_chain_handle->m_render_finished});
+			vk::SubmitInfo submit_info(wait_before_draw, wait_stage, cmd_buffers, signal_once_finished);
+			m_graphics_queue_handle->submit(1, &submit_info, *m_swap_chain_handle->m_frame_in_flight);	
+		}
+
+
+		///////////////////////////////// private functions ///////////////////////////////////
 
 		void Renderer::getTextureAttachments(std::vector<vk::AttachmentDescription>* attachments, std::vector<vk::AttachmentReference>* refs) {
 

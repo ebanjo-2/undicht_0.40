@@ -67,6 +67,13 @@ namespace undicht {
             return properties.deviceName;
         }
 
+		void GraphicsDevice::waitForProcessesToFinish() {
+
+			// waiting for all processes to stop
+			m_device->waitIdle();
+
+		}
+
 		Shader GraphicsDevice::createShader() const {
 
 			return Shader(m_device); 
@@ -74,7 +81,7 @@ namespace undicht {
 
 		Renderer GraphicsDevice::createRenderer() const {
 
-			return Renderer(m_device);
+			return Renderer(this);
 		}
 
 

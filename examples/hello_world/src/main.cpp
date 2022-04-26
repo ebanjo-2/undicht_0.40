@@ -36,8 +36,18 @@ int main() {
 
 	while(!window.shouldClose()) {
 
+		// wait for prev frame to finish
+		swap_chain.beginFrame();	
+
+		// draw
+		renderer.draw();
+
+		// present
+		swap_chain.endFrame();
 		window.update();
 	}
+
+	gpu.waitForProcessesToFinish();
 
 	return 0;
 }

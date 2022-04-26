@@ -32,14 +32,22 @@ namespace undicht {
 			// pipeline
 			vk::Pipeline* m_pipeline = 0;
 				
+			// swapchain
+			SwapChain* m_swap_chain_handle = 0;
+			std::vector<vk::Framebuffer> *m_swap_frame_buffers = 0;
+
+			// command pool
+			vk::CommandPool* m_graphics_cmds = 0;
+			vk::CommandBuffer* m_cmd_buffer = 0;
+
 
 			vk::Device* m_device_handle = 0;
-			SwapChain* m_swap_chain_handle = 0;
+			vk::Queue* m_graphics_queue_handle = 0;
 			Shader* m_shader_handle = 0;
 			
 			friend GraphicsDevice;
 
-			Renderer(vk::Device* device);
+			Renderer(const GraphicsDevice* device);
 		
 		public:
 
@@ -54,6 +62,10 @@ namespace undicht {
 			void setShader(Shader* shader);
 			void setRenderTarget(SwapChain* swap_chain);
 			// void setRenderTarget(const FrameBuffer& frame_buffer);
+			
+			// drawing
+			void draw();
+
 				
 		private:
 

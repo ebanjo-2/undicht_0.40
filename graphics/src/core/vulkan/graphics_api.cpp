@@ -181,7 +181,7 @@ namespace undicht {
 		
 		SwapChain GraphicsAPI::createSwapChain(GraphicsDevice& device, GraphicsSurface& surface) const{
 		
-			SwapChain swap_chain(device.m_physical_device, device.m_device, &surface.m_surface->get());
+			SwapChain swap_chain(&device, &surface.m_surface->get());
 
 			// determining the size of the swap chain images	
 			swap_chain.setExtent(surface.m_width, surface.m_height);

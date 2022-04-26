@@ -22,6 +22,8 @@ namespace undicht {
 
         class GraphicsAPI;
 		class GraphicsSurface;
+		class Renderer;
+		class SwapChain;
 
         class GraphicsDevice {
 
@@ -29,6 +31,8 @@ namespace undicht {
 
             friend GraphicsAPI;
 			friend GraphicsSurface;
+			friend Renderer;
+			friend SwapChain;
 
 
             vk::PhysicalDevice* m_physical_device = 0;
@@ -50,6 +54,8 @@ namespace undicht {
             ~GraphicsDevice();
 
             std::string info() const;
+
+			void waitForProcessesToFinish();
 
 			Shader createShader() const;
 			Renderer createRenderer() const;

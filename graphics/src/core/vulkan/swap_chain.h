@@ -35,15 +35,23 @@ namespace undicht {
 			// swap images
 			std::vector<vk::Image>* m_images = 0;
 			std::vector<vk::ImageView>* m_image_views = 0;
+			uint32_t m_current_image = 0;
+
+			// sync objects
+			vk::Semaphore* m_image_available = 0;
+			vk::Semaphore* m_render_finished = 0;
+			vk::Fence* m_frame_in_flight = 0;
+
 			
 			// handles for objects needed to update the swap chain
 			friend GraphicsAPI;
 			friend Renderer;
 			vk::Device* m_device_handle = 0;
+			vk::Queue* m_present_queue_handle = 0;
 			vk::SurfaceKHR* m_surface_handle = 0;
 
 
-			SwapChain(vk::PhysicalDevice* device, vk::Device* device_handle, vk::SurfaceKHR* surface);
+			SwapChain(GraphicsDevice* device, vk::SurfaceKHR* surface);
 
 			void getSupportDetails(vk::PhysicalDevice* device, vk::SurfaceKHR* surface);
 			bool isFormatSupported(vk::SurfaceFormatKHR* format_khr) const;
@@ -53,6 +61,8 @@ namespace undicht {
 			// updates the vk::SwapChain to represent the changes made
 			void update();
 
+			int acquireNextImage();
+
 		public:
 
 			~SwapChain();
@@ -61,6 +71,10 @@ namespace undicht {
 			void getExtent(uint32_t& width, uint32_t & height) const;
 			uint32_t getWidth() const;
 			uint32_t getHeight() const;
+	
+			void beginFrame();
+			void endFrame();
+	
 		};
 
 	}
