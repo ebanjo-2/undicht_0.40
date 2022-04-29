@@ -20,7 +20,7 @@ namespace undicht {
 
             // only for vulkan
             glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-            glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE); // temporary. will need some work later
+            //glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE); // temporary. will need some work later
 
             // creating the window
             m_window = glfwCreateWindow(width, height, title.data(), 0, 0);
@@ -48,12 +48,30 @@ namespace undicht {
 
         void Window::setSize(uint32_t width, uint32_t height) {
 
+            if((width == m_width) && (m_height == height))
+                return;
+
+            m_width = width;
+            m_height = height;
+            m_has_resized = true;
+
             glfwSetWindowSize(m_window, width, height);
         }
 
         void Window::getSize(uint32_t &width, uint32_t &height) const {
 
-            glfwGetWindowSize(m_window, (int *)&width, (int *)&height);
+            width = m_width;
+            height = m_height;
+        }
+
+        uint32_t Window::getWidth() const {
+
+            return m_width;
+        }
+
+        uint32_t Window::getHeight() const {
+
+            return m_height;
         }
 
         void Window::setFullscreen(Monitor* monitor) {
@@ -83,11 +101,36 @@ namespace undicht {
         void Window::update() {
 
             glfwPollEvents();
+
+            // checking if the window has resized
+            int new_width, new_height;
+            glfwGetFramebufferSize(m_window, &new_width, &new_height);
+
+            if((m_width != new_width) || (m_height != new_height)) {
+
+                m_width = new_width;
+                m_height = new_height;
+                m_has_resized = true;
+            } else {
+
+                m_has_resized = false;
+            }
+
         }
 
-        bool Window::shouldClose() {
+        bool Window::shouldClose() const{
 
             return glfwWindowShouldClose(m_window);
+        }
+
+        bool Window::hasResized() const {
+
+            return m_has_resized;
+        }
+
+        bool Window::isMinimized() const {
+
+            return (m_width == 0) || (m_height == 0);
         }
 
     } // namespace graphics

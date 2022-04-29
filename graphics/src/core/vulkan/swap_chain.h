@@ -13,6 +13,7 @@ namespace undicht {
 		class GraphicsAPI;
 		class GraphicsSurface;
 		class Renderer;
+		class GraphicsDevice;
 
 		class SwapChain {
 
@@ -36,42 +37,72 @@ namespace undicht {
 			std::vector<vk::Image>* m_images = 0;
 			std::vector<vk::ImageView>* m_image_views = 0;
 			uint32_t m_current_image = 0;
+			uint32_t m_max_frames_in_flight = 2;
+			uint32_t m_current_frame = 0;
 
-			// sync objects
-			vk::Semaphore* m_image_available = 0;
-			vk::Semaphore* m_render_finished = 0;
-			vk::Fence* m_frame_in_flight = 0;
+			// sync objects (one for each frame in flight)
+			std::vector<vk::Semaphore>* m_image_available = 0;
+			std::vector<vk::Semaphore>* m_render_finished = 0;
+			std::vector<vk::Fence>* m_frame_in_flight = 0;
 
 			
 			// handles for objects needed to update the swap chain
 			friend GraphicsAPI;
 			friend Renderer;
+            vk::PhysicalDevice* m_physical_device_handle = 0;
 			vk::Device* m_device_handle = 0;
 			vk::Queue* m_present_queue_handle = 0;
 			vk::SurfaceKHR* m_surface_handle = 0;
 
-
 			SwapChain(GraphicsDevice* device, vk::SurfaceKHR* surface);
+
+        public:
+
+            ~SwapChain();
+
+        private:
+
+            // destroys all vulkan objects, but keeps the settings
+            // you then can change some of the settings, and update() the swap chain
+            // to use it again
+            void cleanUp();
+
+        private:
+            // creating the swap chain
+
+            bool checkDeviceCapabilities(vk::PhysicalDevice* device, vk::SurfaceKHR* surface);
+            void chooseSwapImageFormat();
+            void choosePresentMode();
 
 			void getSupportDetails(vk::PhysicalDevice* device, vk::SurfaceKHR* surface);
 			bool isFormatSupported(vk::SurfaceFormatKHR* format_khr) const;
 			bool isPresentModeSupported(vk::PresentModeKHR* mode) const;
 			uint32_t findImageCount() const; // determines the amount of images in the swap chain
-			
+            void initSyncObjects();
+
+        private:
+            // recreating the swap chain
+
 			// updates the vk::SwapChain to represent the changes made
 			void update();
 
-			int acquireNextImage();
+            void retrieveSwapImages();
 
 		public:
 
-			~SwapChain();
+            // to be called when the window was resized
+            void matchSurfaceExtent(const GraphicsSurface& surface);
 
 			void setExtent(uint32_t width, uint32_t height);
 			void getExtent(uint32_t& width, uint32_t & height) const;
 			uint32_t getWidth() const;
 			uint32_t getHeight() const;
-	
+
+			void setMaxFramesInFlight(uint32_t count);
+			uint32_t getMaxFramesInFlight() const;
+			uint32_t getCurrentFrameID() const;
+            int getCurrentImageID() const;
+
 			void beginFrame();
 			void endFrame();
 	

@@ -7,6 +7,7 @@ cmake-build-debug/
 .cache/
 *.swp
 .color_coded
+.vscode/
 
 # .bak files
 *.bak
