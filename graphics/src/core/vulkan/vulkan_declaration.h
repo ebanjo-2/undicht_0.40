@@ -32,15 +32,19 @@ namespace vk {
 	class CommandBuffer;
 	class Semaphore;
 	class Fence;
+    class VertexInputBindingDescription;
+    class VertexInputAttributeDescription;
+    enum class Format;
+    class PipelineVertexInputStateCreateInfo;
+    class Buffer;
+    class DeviceMemory;
+    enum class BufferUsageFlagBits : unsigned int;
+    class MemoryType;
+    class Viewport;
 
-	// Unique* types
-	template<typename t1, typename t2>
-	class UniqueHandle;
-	class DispatchLoaderStatic;
-
+    // KHR extension
     class SurfaceKHR;
 	
-	typedef UniqueHandle<SurfaceKHR, DispatchLoaderStatic> UniqueSurfaceKHR;
 
 }
 

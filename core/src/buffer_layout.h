@@ -3,6 +3,7 @@
 
 #include <types.h>
 #include <vector>
+#include <cstdint>
 
 namespace undicht {
 
@@ -12,12 +13,16 @@ namespace undicht {
       
         std::vector<FixedType> m_types;
 
-        BufferLayout(const std::vector<FixedType> &types);
-
-        unsigned int getTotalSize();
-
         BufferLayout() = default;
+        BufferLayout(const std::vector<FixedType> &types);
         virtual ~BufferLayout() = default;
+
+        void setType(uint32_t index, const FixedType& type);
+        const FixedType& getType(uint32_t index) const;
+
+        uint32_t getOffset(uint32_t index) const;
+
+        unsigned int getTotalSize() const;
     };
 
 } // namespace undicht

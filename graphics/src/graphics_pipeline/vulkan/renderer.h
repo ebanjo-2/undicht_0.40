@@ -7,7 +7,7 @@
 
 #include "graphics_pipeline/vulkan/shader.h"
 #include "graphics_pipeline/vulkan/render_subpass.h"
-
+#include "graphics_pipeline/vulkan/vertex_buffer.h"
 
 namespace undicht {
 
@@ -19,8 +19,9 @@ namespace undicht {
 		
 		private:
 
-			// pipeline layout
-			BufferLayout m_vertex_layout;
+			// pipeline layout (settings)
+            std::vector<vk::VertexInputBindingDescription>* m_vertex_bindings = 0;
+            std::vector<vk::VertexInputAttributeDescription>* m_vertex_attributes = 0;
 			vk::PipelineLayout* m_layout = 0;
 
 			// subpasses
@@ -39,6 +40,9 @@ namespace undicht {
 			// command pool
 			vk::CommandPool* m_graphics_cmds = 0;
 			std::vector<vk::CommandBuffer>* m_cmd_buffer = 0;
+
+            // currently submitted objects
+            const VertexBuffer* m_vbo = 0;
 
 			vk::Device* m_device_handle = 0;
             uint32_t m_graphics_queue_index = 0;
@@ -77,18 +81,29 @@ namespace undicht {
 		public:
 			// pipeline settings 
 
-			void setVertexLayout(const BufferLayout& layout);
+			void setVertexBufferLayout(const VertexBuffer& vbo_prototype);
 			void setShader(Shader* shader);
 			void setRenderTarget(SwapChain* swap_chain);
             void updateRenderTarget(SwapChain* swap_chain);
 			// void setRenderTarget(const FrameBuffer& frame_buffer);
-			
+
+        private:
+            // functions for creating settings objects
+
+            vk::PipelineVertexInputStateCreateInfo getVertexInputState() const;
+            vk::Viewport getViewport() const;
+            vk::Rect2D getScissor() const; // the part of the viewport that gets displayed
+
+        public:
 			// drawing
+
+            void submit(const VertexBuffer& vbo);
+
 			void draw();
 
 		private:
 
-            void recordCommandBuffer(vk::CommandBuffer* cmd_buffer);
+            void recordCommandBuffer(vk::CommandBuffer* cmd_buffer, const VertexBuffer* vbo);
 			void submitCommandBuffer(vk::CommandBuffer* cmd_buffer, std::vector<vk::Semaphore>* wait_on, vk::Semaphore* render_finished, vk::Fence* render_finished_fence);
 
 		};

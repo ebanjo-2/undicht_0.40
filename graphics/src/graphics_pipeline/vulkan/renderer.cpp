@@ -14,12 +14,16 @@ namespace undicht {
 	namespace graphics {
 		
 		Renderer::Renderer(const GraphicsDevice* device) {
-			
+
 			// storing handles
 			m_device_handle = device->m_device;
             m_graphics_queue_index = device->m_queue_family_ids.graphics_queue;
 			m_graphics_queue_handle = device->m_queues.graphics_queue;
-			
+
+            // settings
+            m_vertex_bindings = new std::vector<vk::VertexInputBindingDescription>;
+            m_vertex_attributes = new std::vector<vk::VertexInputAttributeDescription>;
+
 			// creating the command pool
 			m_graphics_cmds = new vk::CommandPool;
 			m_cmd_buffer = new std::vector<vk::CommandBuffer>;
@@ -36,6 +40,11 @@ namespace undicht {
 
             cleanUp();
 
+            // settings
+            delete m_vertex_bindings;
+            delete m_vertex_attributes;
+
+            // actual pipeline objects
             delete m_swap_frame_buffers;
 			delete m_graphics_cmds;
 			delete m_cmd_buffer;
@@ -76,10 +85,10 @@ namespace undicht {
 			createCommandBuffers();
 
 			// info about the fixed pipeline stages
-			vk::PipelineVertexInputStateCreateInfo vertex_input({}, 0, nullptr, 0, nullptr);
+			vk::PipelineVertexInputStateCreateInfo vertex_input = getVertexInputState();
 			vk::PipelineInputAssemblyStateCreateInfo input_assembly({}, vk::PrimitiveTopology::eTriangleList, VK_FALSE);
-			vk::Viewport viewport(0, 0, 800, 600, 0.0f, 1.0f);
-			vk::Rect2D scissor(vk::Offset2D(0,0), vk::Extent2D(800, 600));
+			vk::Viewport viewport = getViewport();
+			vk::Rect2D scissor = getScissor();
 			vk::PipelineViewportStateCreateInfo viewport_state({}, 1, &viewport, 1, &scissor);
 			vk::PipelineRasterizationStateCreateInfo rasterizer({}, VK_FALSE, VK_FALSE, vk::PolygonMode::eFill, vk::CullModeFlagBits::eNone, vk::FrontFace::eClockwise, VK_FALSE, 0.0f, 0.0f, 0.0f, 1.0f);	
 			vk::PipelineMultisampleStateCreateInfo multisample({}, vk::SampleCountFlagBits::e1, VK_FALSE, 1.0f, nullptr, VK_FALSE, VK_FALSE);
@@ -214,9 +223,15 @@ namespace undicht {
 
 		//////////////////////////////// pipeline settings /////////////////////////////////////
 
-		void Renderer::setVertexLayout(const BufferLayout& layout) {
+		void Renderer::setVertexBufferLayout(const VertexBuffer& vbo_prototype) {
 
-			m_vertex_layout = layout;
+            *m_vertex_bindings = {
+                    *vbo_prototype.m_per_vertex_input,
+                    //*vbo_prototype.m_per_instance_input
+            };
+
+            *m_vertex_attributes = vbo_prototype.getAttributeDescriptions();
+
 		}
 
 		void Renderer::setShader(Shader* shader) {
@@ -235,10 +250,53 @@ namespace undicht {
             linkPipeline();
         }
 
+        //////////////////////////// functions for creating settings objects ////////////////////////////
+
+        vk::PipelineVertexInputStateCreateInfo Renderer::getVertexInputState() const {
+
+            vk::PipelineVertexInputStateCreateInfo vertex_input;
+            vertex_input.setVertexBindingDescriptions(*m_vertex_bindings);
+            vertex_input.setVertexAttributeDescriptions(*m_vertex_attributes);
+
+            return vertex_input;
+        }
+
+        vk::Viewport Renderer::getViewport() const {
+
+            vk::Viewport viewport;
+            viewport.setX(0);
+            viewport.setY(0);
+            viewport.setWidth(m_swap_chain_handle->getWidth());
+            viewport.setHeight(m_swap_chain_handle->getHeight());
+            viewport.setMinDepth(0.0f);
+            viewport.setMaxDepth(1.0f);
+
+            return viewport;
+        }
+
+        vk::Rect2D Renderer::getScissor() const {
+            // the part of the viewport that gets displayed
+
+            vk::Rect2D scissor;
+            scissor.setOffset(vk::Offset2D(0,0));
+            scissor.setExtent(vk::Extent2D(m_swap_chain_handle->getWidth(), m_swap_chain_handle->getHeight()));
+
+            return scissor;
+        }
+
 		/////////////////////////////////////// drawing /////////////////////////////////////
 
+        void Renderer::submit(const VertexBuffer &vbo) {
+
+            m_vbo = &vbo;
+        }
 
 		void Renderer::draw() {
+
+            if(!m_vbo) {
+                UND_ERROR << "failed to draw: no vbo submitted\n";
+                return;
+            }
 
             int current_frame = m_swap_chain_handle->getCurrentFrameID();
 
@@ -252,7 +310,7 @@ namespace undicht {
             std::vector<vk::Semaphore> wait_on({*image_ready});
 
             // record the command buffer
-            recordCommandBuffer(cmd);
+            recordCommandBuffer(cmd, m_vbo);
 
 			// submit the command buffer
 			submitCommandBuffer(cmd, &wait_on, render_finished, render_finished_fence);
@@ -260,17 +318,17 @@ namespace undicht {
 
 		/////////////////////////////////////// private draw functions ////////////////////////////
 
-        void Renderer::recordCommandBuffer(vk::CommandBuffer* cmd_buffer) {
+        void Renderer::recordCommandBuffer(vk::CommandBuffer* cmd_buffer, const VertexBuffer* vbo) {
 
             // getting the framebuffer that gets drawn to
             int image_index = m_swap_chain_handle->getCurrentImageID();
             vk::Framebuffer* fbo = &m_swap_frame_buffers->at(image_index);
 
             // viewport size
-            vk::Rect2D render_area({0,0}, {m_swap_chain_handle->getWidth(), m_swap_chain_handle->getHeight()});
+            vk::Rect2D render_area = getScissor();
 
             // clear value
-            std::vector<vk::ClearValue> clear_values = {vk::ClearColorValue(std::array<float, 4>({0.0f, 0.0f, 0.0f, 1.0f}))};
+            std::vector<vk::ClearValue> clear_values = {vk::ClearColorValue(std::array<float, 4>({0.05f, 0.05f, 0.05f, 1.0f}))};
 
             // recording the draw buffer
             cmd_buffer->reset();
@@ -284,7 +342,8 @@ namespace undicht {
 
             // draw commands
             cmd_buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *m_pipeline);
-            cmd_buffer->draw(3, 1, 0, 0);
+            cmd_buffer->bindVertexBuffers(0, *vbo->m_buffer, {0});
+            cmd_buffer->draw(vbo->getVertexCount(), 1, 0, 0);
 
             // ending the render pass
             cmd_buffer->endRenderPass();

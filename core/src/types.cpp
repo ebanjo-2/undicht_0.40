@@ -18,7 +18,7 @@ namespace undicht {
         return m_type;
     }
 
-    unsigned int FixedType::getSize() {
+    unsigned int FixedType::getSize() const {
 
         return m_size * m_num_components;
     }

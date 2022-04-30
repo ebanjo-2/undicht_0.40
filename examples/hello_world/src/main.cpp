@@ -30,22 +30,31 @@ int main() {
 	shader.loadBinaryFile(PROJECT_DIR + "res/frag.spv", UND_FRAGMENT_SHADER);
 	shader.linkStages();
 
+    VertexBuffer vbo = gpu.createVertexBuffer();
+    vbo.setVertexAttribute(0, UND_VEC3F); // position
+    vbo.setVertexAttribute(1, UND_VEC2F); // uv
+    vbo.setData({ 0.0f,-1.0f, 0.0f,  0.0f, 1.0f, // first vertex
+                  0.5f, 0.0f, 0.0f,  1.0f, 0.0f, // second vertex
+                 -0.5f, 0.0f, 0.0f,  0.0f, 0.0f});// third vertex
+
 	Renderer renderer = gpu.createRenderer();
+    renderer.setVertexBufferLayout(vbo);
 	renderer.setShader(&shader);
 	renderer.setRenderTarget(&swap_chain);
 	renderer.linkPipeline();
 
-	while(!window.shouldClose()) {
+    while(!window.shouldClose()) {
 
 		// wait for prev frame to finish
-		swap_chain.beginFrame();	
+		swap_chain.beginFrame();
 
 		// draw
+        renderer.submit(vbo);
 		renderer.draw();
 
 		// present
 		swap_chain.endFrame();
-		window.update();
+        window.update();
 
         // checking for window resize
         if(window.hasResized()) {

@@ -9,6 +9,11 @@
 
 // source files that need vulkan.hpp
 // dont add these to the project!!!
+
+// general files
+#include "graphics_types.cpp"
+
+// core files
 #include "core/vulkan/graphics_api.cpp"
 #include "core/vulkan/graphics_device.cpp"
 #include "core/vulkan/graphics_surface.cpp"
@@ -18,3 +23,5 @@
 #include "graphics_pipeline/vulkan/shader.cpp"
 #include "graphics_pipeline/vulkan/renderer.cpp"
 #include "graphics_pipeline/vulkan/render_subpass.cpp"
+#include "graphics_pipeline/vulkan/vram_buffer.cpp"
+#include "graphics_pipeline/vulkan/vertex_buffer.cpp"

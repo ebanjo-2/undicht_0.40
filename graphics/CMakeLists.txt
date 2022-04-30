@@ -34,6 +34,8 @@ set(GRAPHICS_PIPELINE_SOURCES
 		src/graphics_pipeline/vulkan/shader.h
 		src/graphics_pipeline/vulkan/renderer.h
 		src/graphics_pipeline/vulkan/render_subpass.h
+		src/graphics_pipeline/vulkan/vram_buffer.h
+		src/graphics_pipeline/vulkan/vertex_buffer.h
 
 )
 
@@ -41,7 +43,6 @@ add_library(graphics
 
     src/undicht_graphics.h
     src/graphics_types.h
-		src/graphics_types.cpp
 		
     ${GRAPHICS_WINDOW_SOURCES}
     ${GRAPHICS_CORE_SOURCES}

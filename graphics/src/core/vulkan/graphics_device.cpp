@@ -84,6 +84,11 @@ namespace undicht {
 			return Renderer(this);
 		}
 
+        VertexBuffer GraphicsDevice::createVertexBuffer() const {
+
+            return VertexBuffer(this);
+        }
+
 
 		void GraphicsDevice::retrieveQueueHandles() {
 			// getting the queue handles from the logical device

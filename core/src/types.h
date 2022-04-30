@@ -3,7 +3,7 @@
 
 namespace undicht {
 
-    enum Type {
+    enum class Type {
         INT, // group of all integer types (short, char, int, long, ...)
         UNSIGNED_INT,
         FLOAT
@@ -22,7 +22,7 @@ namespace undicht {
 
       public:
         // Constructors
-
+        FixedType() = default;
         FixedType(Type t, unsigned int size, unsigned int num_comp = 1, bool little_endian = true);
 
       public:
@@ -32,7 +32,7 @@ namespace undicht {
         operator Type();
 
         // size of the complete type (number of components * size of each component)
-        unsigned int getSize();
+        unsigned int getSize() const;
     };
 
 
