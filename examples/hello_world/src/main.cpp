@@ -8,7 +8,7 @@ using namespace graphics;
 
 // root dir of the hello world example
 const std::string PROJECT_DIR = std::string(__FILE__).substr(0, std::string(__FILE__).rfind('/')) + "/../";
-const int MAX_FRAMES_IN_FLIGHT = 2;
+const int MAX_FRAMES_IN_FLIGHT = 1;
 
 int main() {
 
@@ -33,9 +33,19 @@ int main() {
     VertexBuffer vbo = gpu.createVertexBuffer();
     vbo.setVertexAttribute(0, UND_VEC3F); // position
     vbo.setVertexAttribute(1, UND_VEC2F); // uv
-    vbo.setVertexData({ 0.5f,-1.0f, 0.0f,  0.5f, 1.0f, // first vertex
-                  0.5f, 0.0f, 0.0f,  1.0f, 0.0f, // second vertex
-                 -0.5f, 0.0f, 0.0f,  0.0f, 0.0f});// third vertex
+    vbo.setVertexData({
+        -0.5f,-0.5f, 0.0f,  0.0f, 1.0f, // top left
+        0.5f,-0.5f, 0.0f,  1.0f, 1.0f, // top right
+        0.5f, 0.0f, 0.0f,  1.0f, 0.0f, // bottom right
+        -0.5f, 0.0f, 0.0f,  0.0f, 0.0f
+    });// bottom left
+
+    vbo.setIndexData({0, 1, 2, 2, 3, 0});
+    vbo.setInstanceAttribute(0, UND_VEC2F); // instance position
+    vbo.setInstanceData({
+        0.0f, 0.0f,
+        0.5f, 0.6f
+    });
 
 	Renderer renderer = gpu.createRenderer();
     renderer.setVertexBufferLayout(vbo);

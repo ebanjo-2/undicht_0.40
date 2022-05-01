@@ -26,7 +26,12 @@ namespace undicht {
             BufferLayout m_vertex_attributes;
             vk::VertexInputBindingDescription* m_per_vertex_input = 0;
 
+            // index data
+            VramBuffer m_index_data;
+
             // per instance data
+            VramBuffer m_instance_data;
+            BufferLayout m_instance_attributes;
             vk::VertexInputBindingDescription* m_per_instance_input = 0;
 
             friend GraphicsDevice;
@@ -47,6 +52,8 @@ namespace undicht {
 
             void initTransferBuffer();
             void initVertexDataBuffer();
+            void initIndexDataBuffer();
+            void initInstanceDataBuffer();
 
         public:
             // specifying the vertex layout
@@ -54,6 +61,12 @@ namespace undicht {
             void setVertexAttributes(const BufferLayout& layout);
             void setVertexAttribute(uint32_t index, const FixedType& type);
             const BufferLayout& getVertexAttributes() const;
+
+            // layout of the data that changes every instance (instead of every vertex)
+            void setInstanceAttributes(const BufferLayout& layout);
+            void setInstanceAttribute(uint32_t index, const FixedType& type);
+            const BufferLayout& getInstanceAttributes() const;
+
 
         private:
             // private functions for specifying vertex layout
@@ -65,8 +78,13 @@ namespace undicht {
             // setting data
 
             void setVertexData(const std::vector<float>& data);
+            void setIndexData(const std::vector<uint32_t>& data);
+            void setInstanceData(const std::vector<float>& data);
 
+            bool usesIndices() const;
+            bool usesInstancing() const;
             uint32_t getVertexCount() const;
+            uint32_t getInstanceCount() const;
 
         };
 

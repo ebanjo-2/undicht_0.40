@@ -48,8 +48,9 @@ namespace undicht {
         protected:
             // allocating memory
 
+            // makes sure that the buffer has at least a size of byte_size
+            void reserve(uint32_t byte_size);
             void allocate(uint32_t byte_size);
-            void deallocate(); // free the memory belonging to this buffer
 
             void createCommandPool();
         private:
@@ -61,7 +62,7 @@ namespace undicht {
             // storing data
 
             void setData(const void* data, uint32_t byte_size, uint32_t offset);
-            void setData(const VramBuffer& data, uint32_t offset); // copy from buffer
+            void setData(const VramBuffer& data, uint32_t byte_size, uint32_t src_offset, uint32_t dst_offset); // copy from buffer
 
             uint32_t getSize() const; // size in bytes
 

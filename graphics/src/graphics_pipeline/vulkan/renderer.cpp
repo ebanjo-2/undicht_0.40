@@ -225,10 +225,10 @@ namespace undicht {
 
 		void Renderer::setVertexBufferLayout(const VertexBuffer& vbo_prototype) {
 
-            *m_vertex_bindings = {
-                    *vbo_prototype.m_per_vertex_input,
-                    //*vbo_prototype.m_per_instance_input
-            };
+            m_vertex_bindings->push_back(*vbo_prototype.m_per_vertex_input);
+
+            if(vbo_prototype.usesInstancing())
+                m_vertex_bindings->push_back(*vbo_prototype.m_per_instance_input);
 
             *m_vertex_attributes = vbo_prototype.getAttributeDescriptions();
 
@@ -343,7 +343,14 @@ namespace undicht {
             // draw commands
             cmd_buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *m_pipeline);
             cmd_buffer->bindVertexBuffers(0, *vbo->m_vertex_data.m_buffer, {0});
-            cmd_buffer->draw(vbo->getVertexCount(), 1, 0, 0);
+            if(vbo->usesInstancing())cmd_buffer->bindVertexBuffers(1, *vbo->m_instance_data.m_buffer, {0});
+
+            if(vbo->usesIndices()) {
+                cmd_buffer->bindIndexBuffer(*m_vbo->m_index_data.m_buffer, 0, vk::IndexType::eUint32);
+                cmd_buffer->drawIndexed(vbo->getVertexCount(), vbo->getInstanceCount(), 0, 0, 0);
+            } else {
+                cmd_buffer->draw(vbo->getVertexCount(), vbo->getInstanceCount(), 0, 0);
+            }
 
             // ending the render pass
             cmd_buffer->endRenderPass();
