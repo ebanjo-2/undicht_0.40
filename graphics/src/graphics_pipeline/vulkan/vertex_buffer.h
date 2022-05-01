@@ -14,13 +14,17 @@ namespace undicht {
         class GraphicsDevice;
         class Renderer;
 
-        class VertexBuffer : public VramBuffer {
+        class VertexBuffer {
 
         private:
 
+            // transfer ("staging") buffer
+            VramBuffer m_transfer_data;
+
             // per vertex data
-            vk::VertexInputBindingDescription* m_per_vertex_input = 0;
+            VramBuffer m_vertex_data;
             BufferLayout m_vertex_attributes;
+            vk::VertexInputBindingDescription* m_per_vertex_input = 0;
 
             // per instance data
             vk::VertexInputBindingDescription* m_per_instance_input = 0;
@@ -28,7 +32,8 @@ namespace undicht {
             friend GraphicsDevice;
             friend Renderer;
 
-            VertexBuffer() = default;
+            const GraphicsDevice* m_device_handle = 0;
+
             VertexBuffer(const GraphicsDevice* device);
 
             void cleanUp();
@@ -36,6 +41,12 @@ namespace undicht {
         public:
 
             virtual ~VertexBuffer();
+
+        private:
+            // initializing the buffers
+
+            void initTransferBuffer();
+            void initVertexDataBuffer();
 
         public:
             // specifying the vertex layout
@@ -53,7 +64,7 @@ namespace undicht {
         public:
             // setting data
 
-            void setData(const std::vector<float>& data);
+            void setVertexData(const std::vector<float>& data);
 
             uint32_t getVertexCount() const;
 

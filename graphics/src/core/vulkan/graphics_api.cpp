@@ -42,10 +42,8 @@ namespace undicht {
 
         GraphicsAPI::~GraphicsAPI() {
 
-            if(m_instance) {
-                m_instance->destroy();
-                delete m_instance;
-            }
+            m_instance->destroy();
+            delete m_instance;
 
         }
 
@@ -89,12 +87,14 @@ namespace undicht {
 
 				}	
 				// the best device has been found
+                if(!highest_score)
+                    UND_ERROR << "Failed to find a suitable Graphics Device\n";
 			}
 
-			vk::PhysicalDevice* device = &devices.at(id);
-			findQueueFamilies(device, surf, queue_families);
+			vk::PhysicalDevice device = devices.at(id);
+			findQueueFamilies(&device, surf, queue_families);
 
-			return GraphicsDevice(device, surf, &queue_families, REQUIRED_DEVICE_EXTENSIONS);
+			return GraphicsDevice(device, surf, queue_families, REQUIRED_DEVICE_EXTENSIONS);
         }
 
         uint32_t GraphicsAPI::rateDevice(const GraphicsDevice& device) const {
@@ -131,6 +131,7 @@ namespace undicht {
 			
 			bool graphics_queue = false;
 			bool present_queue = false;
+            bool transfer_queue = false;
 	
             std::vector<vk::QueueFamilyProperties> queues = device->getQueueFamilyProperties();				
 	
@@ -151,9 +152,14 @@ namespace undicht {
 					present_queue = true;	
 				}
 
+                // transfer queue (must be different to the graphics queue)
+                if((!transfer_queue) && (queues[i].queueFlags & vk::QueueFlagBits::eTransfer) &&  (!(queues[i].queueFlags & vk::QueueFlagBits::eGraphics))) {
+                    ids.transfer_queue = i;
+                    transfer_queue = true;
+                }
             }
 
-			return graphics_queue && present_queue;
+			return graphics_queue && present_queue && transfer_queue;
 		}
 
 		bool GraphicsAPI::checkDeviceExtensions(vk::PhysicalDevice* device) const{

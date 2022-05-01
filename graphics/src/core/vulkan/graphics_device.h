@@ -19,6 +19,7 @@ namespace undicht {
 		struct QueueFamilyIDs {
 			uint32_t graphics_queue = 0;
 			uint32_t present_queue = 0;
+            uint32_t transfer_queue = 0;
 		};
 
         class GraphicsAPI;
@@ -43,24 +44,35 @@ namespace undicht {
             vk::PhysicalDevice* m_physical_device = 0;
             vk::Device * m_device = 0;
 
-         	QueueFamilyIDs m_queue_family_ids;
+            // queues
+            vk::Queue* m_graphics_queue = 0;
+            uint32_t m_graphics_queue_id = 0;
+            vk::Queue* m_present_queue = 0;
+            uint32_t m_present_queue_id = 0;
+            vk::Queue* m_transfer_queue = 0;
+            uint32_t m_transfer_queue_id = 0;
+
 			std::set<uint32_t> m_unique_queue_family_ids;
 
-			struct {
-				vk::Queue* graphics_queue;
-				vk::Queue* present_queue;
-			} m_queues;
-
             // only the graphics api can create GraphicsDevice objects
-            GraphicsDevice(vk::PhysicalDevice* device, vk::SurfaceKHR* surface, QueueFamilyIDs* queue_families, const std::vector<const char*>& extensions);
+            GraphicsDevice(vk::PhysicalDevice device, vk::SurfaceKHR* surface, QueueFamilyIDs queue_families, const std::vector<const char*>& extensions);
 
-          public:
+            void retrieveQueueHandles();
+            std::vector<vk::DeviceQueueCreateInfo> getQueueCreateInfos(float* priority);
+
+        public:
 
             ~GraphicsDevice();
+
+        public:
+            // interface
 
             std::string info() const;
 
 			void waitForProcessesToFinish();
+
+        public:
+            // creating objects on the gpu
 
 			Shader createShader() const;
 			Renderer createRenderer() const;
@@ -68,7 +80,7 @@ namespace undicht {
 
           private:
 
-			void retrieveQueueHandles();
+
         };
 
     } // namespace graphics

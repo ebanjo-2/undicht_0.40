@@ -17,8 +17,8 @@ namespace undicht {
 
 			// storing handles
 			m_device_handle = device->m_device;
-            m_graphics_queue_index = device->m_queue_family_ids.graphics_queue;
-			m_graphics_queue_handle = device->m_queues.graphics_queue;
+            m_graphics_queue_index = device->m_graphics_queue_id;
+			m_graphics_queue_handle = device->m_graphics_queue;
 
             // settings
             m_vertex_bindings = new std::vector<vk::VertexInputBindingDescription>;
@@ -168,10 +168,10 @@ namespace undicht {
 
 			// declaring the stages the subpass depends on
 			vk::SubpassDependency subpass_dependency(VK_SUBPASS_EXTERNAL, 0);
-		   subpass_dependency.setSrcStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput);
-		   subpass_dependency.setDstStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput);
-		   subpass_dependency.setSrcAccessMask(vk::AccessFlagBits::eNone);
-		   subpass_dependency.setDstAccessMask(vk::AccessFlagBits::eColorAttachmentWrite);
+            subpass_dependency.setSrcStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput);
+		    subpass_dependency.setDstStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput);
+		    subpass_dependency.setSrcAccessMask(vk::AccessFlagBits::eNone);
+		    subpass_dependency.setDstAccessMask(vk::AccessFlagBits::eColorAttachmentWrite);
 			std::vector<vk::SubpassDependency> subpass_dependencies({subpass_dependency});
 
 			// creating the render pass
@@ -342,7 +342,7 @@ namespace undicht {
 
             // draw commands
             cmd_buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *m_pipeline);
-            cmd_buffer->bindVertexBuffers(0, *vbo->m_buffer, {0});
+            cmd_buffer->bindVertexBuffers(0, *vbo->m_vertex_data.m_buffer, {0});
             cmd_buffer->draw(vbo->getVertexCount(), 1, 0, 0);
 
             // ending the render pass

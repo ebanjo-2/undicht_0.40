@@ -26,19 +26,21 @@ namespace undicht {
 	
 		Shader::~Shader() {
 
-			if(m_vert_shader) {
-				m_device_handle->destroyShaderModule(*m_vert_shader);
-				delete m_vert_shader;
-			}
+            cleanUp();
 
-			if(m_frag_shader) {
-				m_device_handle->destroyShaderModule(*m_frag_shader);
-				delete m_frag_shader;
-			}
-
-			if(m_stages)
-				delete m_stages;
+	        delete m_vert_shader;
+            delete m_frag_shader;
+            delete m_stages;
 		}
+
+        void Shader::cleanUp() {
+
+            m_device_handle->destroyShaderModule(*m_frag_shader);
+            m_device_handle->destroyShaderModule(*m_vert_shader);
+
+        }
+
+        //////////////////////////////////////////// loading source code //////////////////////////////////////////
 
 		void Shader::loadBinaryFile(const std::string& file_name, int stage) {
 
@@ -89,7 +91,6 @@ namespace undicht {
 			vk::ShaderModuleCreateInfo vert_info({}, m_vert_shader_bin.size(), (uint32_t*) m_vert_shader_bin.data());
 			vk::ShaderModuleCreateInfo frag_info({}, m_frag_shader_bin.size(), (uint32_t*) m_frag_shader_bin.data());
 
-			
 			*m_vert_shader = m_device_handle->createShaderModule(vert_info);
 			*m_frag_shader = m_device_handle->createShaderModule(frag_info);
 

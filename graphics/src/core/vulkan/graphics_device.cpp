@@ -11,31 +11,29 @@ namespace undicht {
 
     namespace graphics {
 
-        GraphicsDevice::GraphicsDevice(vk::PhysicalDevice* device, vk::SurfaceKHR* surface, QueueFamilyIDs* queue_families, const std::vector<const char*>& extensions) {
+        GraphicsDevice::GraphicsDevice(vk::PhysicalDevice device, vk::SurfaceKHR* surface, QueueFamilyIDs queue_families, const std::vector<const char*>& extensions) {
 
             m_physical_device = new vk::PhysicalDevice;
-            *m_physical_device = *device;
-			
-			m_queue_family_ids = *queue_families;
+            *m_physical_device = device;
 
-			// only requesting unique queue ids
-			m_unique_queue_family_ids = {m_queue_family_ids.graphics_queue, m_queue_family_ids.present_queue};
-			std::vector<vk::DeviceQueueCreateInfo> queue_infos;
+            m_graphics_queue = new vk::Queue;
+            m_present_queue = new vk::Queue;
+            m_transfer_queue = new vk::Queue;
 
-			float priority = 1.0f; // queue priority
+			m_graphics_queue_id = queue_families.graphics_queue;
+            m_present_queue_id = queue_families.present_queue;
+            m_transfer_queue_id = queue_families.transfer_queue;
 
-			for(const uint32_t& id : m_unique_queue_family_ids) {
-
-				queue_infos.emplace_back(vk::DeviceQueueCreateInfo({}, id, 1, &priority));
-			}
-
+            // getting info about which queue families the logical device needs
+            float priority = 1.0f;
+            std::vector<vk::DeviceQueueCreateInfo> queue_infos = getQueueCreateInfos(&priority);
 
             // specifying which device features are required
 	   		vk::PhysicalDeviceFeatures features;
 
             // creating the logical device
+	        vk::DeviceCreateInfo info({}, queue_infos.size(), queue_infos.data(), 0, {}, extensions.size(), extensions.data(), &features);
             m_device = new vk::Device;
-	        vk::DeviceCreateInfo info({}, queue_infos.size(), queue_infos.data(), 0, {}, extensions.size(), extensions.data(), &features);                                                        
             *m_device = m_physical_device->createDevice(info);
 
 			retrieveQueueHandles();
@@ -43,21 +41,40 @@ namespace undicht {
 
         GraphicsDevice::~GraphicsDevice() {
 
-			if(m_queues.graphics_queue)
-				delete m_queues.graphics_queue;
+            delete m_graphics_queue;
+            delete m_present_queue;
+            delete m_transfer_queue;
 
-			if(m_queues.present_queue)
-				delete m_queues.present_queue;
-
-            if(m_device){
-        		m_device->destroy();
-                delete m_device;
-	   		}
-
-            if(m_physical_device)
-                delete m_physical_device;
+            m_device->destroy();
+            delete m_device;
+            delete m_physical_device;
 
         }
+
+        void GraphicsDevice::retrieveQueueHandles() {
+            // getting the queue handles from the logical device
+
+            m_device->getQueue(m_graphics_queue_id, 0, m_graphics_queue);
+            m_device->getQueue(m_present_queue_id, 0, m_present_queue);
+            m_device->getQueue(m_transfer_queue_id, 0, m_transfer_queue);
+        }
+
+        std::vector<vk::DeviceQueueCreateInfo> GraphicsDevice::getQueueCreateInfos(float* priority) {
+
+            // only requesting unique queue ids
+            m_unique_queue_family_ids = {m_graphics_queue_id, m_present_queue_id, m_transfer_queue_id};
+            std::vector<vk::DeviceQueueCreateInfo> queue_infos;
+
+            for(const uint32_t& id : m_unique_queue_family_ids) {
+
+                queue_infos.emplace_back(vk::DeviceQueueCreateInfo({}, id, 1, priority));
+            }
+
+            return queue_infos;
+        }
+
+
+        //////////////////////////////////////////////// interface //////////////////////////////////////////////
 
         std::string GraphicsDevice::info() const {
 
@@ -74,6 +91,9 @@ namespace undicht {
 
 		}
 
+
+        ///////////////////////////////////////// creating objects on the gpu /////////////////////////////////////
+
 		Shader GraphicsDevice::createShader() const {
 
 			return Shader(m_device); 
@@ -88,18 +108,6 @@ namespace undicht {
 
             return VertexBuffer(this);
         }
-
-
-		void GraphicsDevice::retrieveQueueHandles() {
-			// getting the queue handles from the logical device
-			
-			m_queues.graphics_queue = new vk::Queue;
-			m_queues.present_queue = new vk::Queue;
-
-			m_device->getQueue(m_queue_family_ids.graphics_queue, 0, m_queues.graphics_queue);
-		    m_device->getQueue(m_queue_family_ids.present_queue, 0, m_queues.present_queue); 
-			
-		}	
 
     }
 

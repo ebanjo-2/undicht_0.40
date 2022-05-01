@@ -4,13 +4,16 @@ namespace undicht {
 
     namespace graphics {
 
-        VertexBuffer::VertexBuffer(const GraphicsDevice* device) : VramBuffer(device) {
+        VertexBuffer::VertexBuffer(const GraphicsDevice* device) : m_vertex_data(device), m_transfer_data(device) {
 
+            m_device_handle = device;
+
+            // vertex bindings
             m_per_vertex_input = new vk::VertexInputBindingDescription(0, 0, vk::VertexInputRate::eVertex);
             m_per_instance_input = new vk::VertexInputBindingDescription(1, 0, vk::VertexInputRate::eInstance);
 
-            // the vertex buffer is only going to be used by the graphics queue
-            setUsage(vk::BufferUsageFlagBits::eVertexBuffer, {device->m_queue_family_ids.graphics_queue});
+            initTransferBuffer();
+            initVertexDataBuffer();
         }
 
         VertexBuffer::~VertexBuffer() {
@@ -25,6 +28,47 @@ namespace undicht {
 
             if(!m_device_handle)
                 return;
+
+        }
+
+        ///////////////////////////////////// initializing the buffers /////////////////////////////////////
+
+        void VertexBuffer::initTransferBuffer() {
+
+            // queue families this buffer is going to be accessed from
+            std::vector<uint32_t> queue_ids;
+            queue_ids.push_back(m_device_handle->m_transfer_queue_id); // obviously
+
+            // memory properties
+            vk::MemoryPropertyFlags mem_properties; // needs to be directly accessible by the cpu
+            mem_properties |= vk::MemoryPropertyFlagBits::eHostCoherent;
+            mem_properties |= vk::MemoryPropertyFlagBits::eHostVisible;
+
+            // usage
+            vk::BufferUsageFlags usage_flags = {};
+            usage_flags |= vk::BufferUsageFlagBits::eTransferSrc;
+
+            m_transfer_data.setUsage(usage_flags, mem_properties,  queue_ids);
+
+        }
+
+        void VertexBuffer::initVertexDataBuffer() {
+
+            // queue families this buffer is going to be accessed from
+            std::vector<uint32_t> queue_ids;
+            queue_ids.push_back(m_device_handle->m_graphics_queue_id); // these two should be different
+            queue_ids.push_back(m_device_handle->m_transfer_queue_id);
+
+            // memory properties
+            vk::MemoryPropertyFlags mem_properties; // preferably actual device memory (fastest)
+            mem_properties |= vk::MemoryPropertyFlagBits::eDeviceLocal;
+
+            // usage
+            vk::BufferUsageFlags usage_flags = {};
+            usage_flags |= vk::BufferUsageFlagBits::eVertexBuffer;
+            usage_flags |= vk::BufferUsageFlagBits::eTransferDst; // data needs to be able to be copied to it
+
+            m_vertex_data.setUsage(usage_flags, mem_properties,  queue_ids);
 
         }
 
@@ -73,22 +117,23 @@ namespace undicht {
 
         ////////////////////////////////////////// setting data ////////////////////////////////////////
 
-        void VertexBuffer::setData(const std::vector<float>& data) {
+        void VertexBuffer::setVertexData(const std::vector<float>& data) {
 
-            // deallocating old memory
-            deallocate();
+            // storing the data in the transfer buffer
+            m_transfer_data.deallocate();
+            m_transfer_data.allocate(data.size() * sizeof(float));
+            m_transfer_data.setData(data.data(), data.size() * sizeof(float), 0);
 
-            // allocating new memory
-            allocate(data.size() * sizeof(float));
-
-            // storing the data
-            VramBuffer::setData(data.data(), data.size() * sizeof(float), 0);
+            // copying the data to the vertex buffer (on cpu invisible but faster gpu memory)
+            m_vertex_data.deallocate();
+            m_vertex_data.allocate(data.size() * sizeof(float));
+            m_vertex_data.setData(m_transfer_data, 0);
 
         }
 
         uint32_t VertexBuffer::getVertexCount() const {
 
-            return m_byte_size / m_vertex_attributes.getTotalSize();
+            return m_vertex_data.getSize() / m_vertex_attributes.getTotalSize();
         }
 
     } // graphics

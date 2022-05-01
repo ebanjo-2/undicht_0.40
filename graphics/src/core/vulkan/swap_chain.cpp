@@ -18,7 +18,7 @@ namespace undicht {
 
             m_physical_device_handle = device->m_physical_device;
 			m_device_handle = device->m_device;
-			m_present_queue_handle = device->m_queues.present_queue;
+			m_present_queue_handle = device->m_present_queue;
 			m_surface_handle = surface;
 
             // checking device capabilities

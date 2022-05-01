@@ -36,9 +36,13 @@ namespace undicht {
 
 			Shader(vk::Device* device);
 
+            void cleanUp();
+
 		public:
 
 			~Shader();
+
+            // loading source code
 
 			void loadBinaryFile(const std::string& file_name, int stage);
 			void loadBinarySource(const std::vector<char>& bytes, int stage);

@@ -33,7 +33,7 @@ int main() {
     VertexBuffer vbo = gpu.createVertexBuffer();
     vbo.setVertexAttribute(0, UND_VEC3F); // position
     vbo.setVertexAttribute(1, UND_VEC2F); // uv
-    vbo.setData({ 0.0f,-1.0f, 0.0f,  0.0f, 1.0f, // first vertex
+    vbo.setVertexData({ 0.5f,-1.0f, 0.0f,  0.5f, 1.0f, // first vertex
                   0.5f, 0.0f, 0.0f,  1.0f, 0.0f, // second vertex
                  -0.5f, 0.0f, 0.0f,  0.0f, 0.0f});// third vertex
 

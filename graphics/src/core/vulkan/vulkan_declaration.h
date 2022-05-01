@@ -17,6 +17,8 @@ namespace vk {
 	enum class PresentModeKHR;
 	class Extent2D;
 	class Extent3D;
+    class Rect2D;
+    class Rect3D;
 	class Image;
 	class ImageView;
 	class ShaderModule;
@@ -38,9 +40,15 @@ namespace vk {
     class PipelineVertexInputStateCreateInfo;
     class Buffer;
     class DeviceMemory;
-    enum class BufferUsageFlagBits : unsigned int;
     class MemoryType;
     class Viewport;
+
+    // flags
+    template<typename T> class Flags;
+    enum class MemoryPropertyFlagBits : unsigned int;
+    using MemoryPropertyFlags = Flags<MemoryPropertyFlagBits>;
+    enum class BufferUsageFlagBits : unsigned int;
+    using BufferUsageFlags = Flags<BufferUsageFlagBits>;
 
     // KHR extension
     class SurfaceKHR;
