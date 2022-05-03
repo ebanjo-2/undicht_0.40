@@ -8,6 +8,7 @@
 #include "graphics_pipeline/vulkan/shader.h"
 #include "graphics_pipeline/vulkan/render_subpass.h"
 #include "graphics_pipeline/vulkan/vertex_buffer.h"
+#include "graphics_pipeline/vulkan/uniform_buffer.h"
 
 namespace undicht {
 
@@ -22,6 +23,8 @@ namespace undicht {
 			// pipeline layout (settings)
             std::vector<vk::VertexInputBindingDescription>* m_vertex_bindings = 0;
             std::vector<vk::VertexInputAttributeDescription>* m_vertex_attributes = 0;
+            vk::DescriptorSetLayout* m_uniform_buffer_layout = 0;
+            bool m_use_uniform_buffer = false;
 			vk::PipelineLayout* m_layout = 0;
 
 			// subpasses
@@ -43,6 +46,10 @@ namespace undicht {
 
             // currently submitted objects
             const VertexBuffer* m_vbo = 0;
+            const UniformBuffer* m_ubo = 0;
+
+            uint32_t m_max_frames_in_flight = 1;
+            uint32_t m_current_frame = 0;
 
 			vk::Device* m_device_handle = 0;
             uint32_t m_graphics_queue_index = 0;
@@ -79,8 +86,12 @@ namespace undicht {
 			void createCommandBuffers();
 
 		public:
-			// pipeline settings 
+			// pipeline settings
 
+            void setMaxFramesInFlight(uint32_t num);
+            void setCurrentFrameID(uint32_t frame);
+
+            void setUniformBufferLayout(const UniformBuffer& ubo_prototype);
 			void setVertexBufferLayout(const VertexBuffer& vbo_prototype);
 			void setShader(Shader* shader);
 			void setRenderTarget(SwapChain* swap_chain);
@@ -93,17 +104,19 @@ namespace undicht {
             vk::PipelineVertexInputStateCreateInfo getVertexInputState() const;
             vk::Viewport getViewport() const;
             vk::Rect2D getScissor() const; // the part of the viewport that gets displayed
+            vk::PipelineLayoutCreateInfo getUniformLayout() const;
 
         public:
 			// drawing
 
             void submit(const VertexBuffer& vbo);
+            void submit(const UniformBuffer& ubo);
 
 			void draw();
 
 		private:
 
-            void recordCommandBuffer(vk::CommandBuffer* cmd_buffer, const VertexBuffer* vbo);
+            void recordCommandBuffer(vk::CommandBuffer* cmd_buffer, const VertexBuffer* vbo, const UniformBuffer* ubo);
 			void submitCommandBuffer(vk::CommandBuffer* cmd_buffer, std::vector<vk::Semaphore>* wait_on, vk::Semaphore* render_finished, vk::Fence* render_finished_fence);
 
 		};

@@ -10,6 +10,7 @@
 #include "graphics_pipeline/vulkan/shader.h"
 #include "graphics_pipeline/vulkan/renderer.h"
 #include "graphics_pipeline/vulkan/vertex_buffer.h"
+#include "graphics_pipeline/vulkan/uniform_buffer.h"
 
 
 namespace undicht {
@@ -28,6 +29,7 @@ namespace undicht {
 		class SwapChain;
         class VertexBuffer;
         class VramBuffer;
+        class UniformBuffer;
 
         class GraphicsDevice {
 
@@ -39,6 +41,7 @@ namespace undicht {
 			friend SwapChain;
             friend VertexBuffer;
             friend VramBuffer;
+            friend UniformBuffer;
 
 
             vk::PhysicalDevice* m_physical_device = 0;
@@ -77,6 +80,7 @@ namespace undicht {
 			Shader createShader() const;
 			Renderer createRenderer() const;
             VertexBuffer createVertexBuffer() const;
+            UniformBuffer createUniformBuffer() const;
 
           private:
 

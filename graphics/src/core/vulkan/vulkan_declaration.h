@@ -42,6 +42,9 @@ namespace vk {
     class DeviceMemory;
     class MemoryType;
     class Viewport;
+    class DescriptorSetLayout;
+    class DescriptorPool;
+    class DescriptorSet;
 
     // flags
     template<typename T> class Flags;

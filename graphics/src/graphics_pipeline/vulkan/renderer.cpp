@@ -23,6 +23,7 @@ namespace undicht {
             // settings
             m_vertex_bindings = new std::vector<vk::VertexInputBindingDescription>;
             m_vertex_attributes = new std::vector<vk::VertexInputAttributeDescription>;
+            m_uniform_buffer_layout = new vk::DescriptorSetLayout;
 
 			// creating the command pool
 			m_graphics_cmds = new vk::CommandPool;
@@ -43,6 +44,7 @@ namespace undicht {
             // settings
             delete m_vertex_bindings;
             delete m_vertex_attributes;
+            delete m_uniform_buffer_layout;
 
             // actual pipeline objects
             delete m_swap_frame_buffers;
@@ -99,11 +101,11 @@ namespace undicht {
 			std::vector<vk::DynamicState> dynamic_states({vk::DynamicState::eViewport, vk::DynamicState::eLineWidth});
 			vk::PipelineDynamicStateCreateInfo dynamic_state({}, dynamic_states); 
 			
-			// creating the pipeline info
-			vk::PipelineLayoutCreateInfo pipeline_layout({}, 0, nullptr, 0, nullptr);
-			*m_layout = m_device_handle->createPipelineLayout(pipeline_layout);
-			
-			// creating the pipeline
+			// creating the pipeline layout (shader uniforms)
+			vk::PipelineLayoutCreateInfo pipeline_layout = getUniformLayout();
+            *m_layout = m_device_handle->createPipelineLayout(pipeline_layout);
+
+            // creating the pipeline
 			vk::GraphicsPipelineCreateInfo pipeline_info({}, *m_shader_handle->m_stages);
 			pipeline_info.setPVertexInputState(&vertex_input);
 			pipeline_info.setPInputAssemblyState(&input_assembly);
@@ -213,15 +215,30 @@ namespace undicht {
                 return;
             }
 
-            int max_frames_in_flight = m_swap_chain_handle->getMaxFramesInFlight();
-
             // creating a command buffer for each frame in flight
-			vk::CommandBufferAllocateInfo allocate_info(*m_graphics_cmds, vk::CommandBufferLevel::ePrimary, max_frames_in_flight);
+			vk::CommandBufferAllocateInfo allocate_info(*m_graphics_cmds, vk::CommandBufferLevel::ePrimary, m_max_frames_in_flight);
 			*m_cmd_buffer = m_device_handle->allocateCommandBuffers(allocate_info);
 
 		}
 
 		//////////////////////////////// pipeline settings /////////////////////////////////////
+
+        void Renderer::setMaxFramesInFlight(uint32_t num) {
+
+            m_max_frames_in_flight = num;
+        }
+
+        void Renderer::setCurrentFrameID(uint32_t frame) {
+
+            m_current_frame = frame;
+        }
+
+
+        void Renderer::setUniformBufferLayout(const UniformBuffer& ubo_prototype) {
+
+            *m_uniform_buffer_layout = *ubo_prototype.m_descriptor_layout;
+            m_use_uniform_buffer = true;
+        }
 
 		void Renderer::setVertexBufferLayout(const VertexBuffer& vbo_prototype) {
 
@@ -284,7 +301,27 @@ namespace undicht {
             return scissor;
         }
 
+        vk::PipelineLayoutCreateInfo Renderer::getUniformLayout() const {
+
+            vk::PipelineLayoutCreateInfo pipeline_layout;
+
+            if(!m_use_uniform_buffer)
+                return pipeline_layout;
+
+            pipeline_layout.pSetLayouts = m_uniform_buffer_layout;
+            pipeline_layout.setLayoutCount = 1;
+
+            return pipeline_layout;
+        }
+
 		/////////////////////////////////////// drawing /////////////////////////////////////
+
+        void Renderer::submit(const UniformBuffer &ubo) {
+
+            m_ubo = &ubo;
+            m_use_uniform_buffer = true;
+
+        }
 
         void Renderer::submit(const VertexBuffer &vbo) {
 
@@ -298,19 +335,17 @@ namespace undicht {
                 return;
             }
 
-            int current_frame = m_swap_chain_handle->getCurrentFrameID();
-
             // getting the objects that belong to this frame
-            vk::CommandBuffer* cmd = &m_cmd_buffer->at(current_frame);
-            vk::Semaphore* image_ready = &m_swap_chain_handle->m_image_available->at(current_frame);
-            vk::Semaphore* render_finished = &m_swap_chain_handle->m_render_finished->at(current_frame);
-            vk::Fence* render_finished_fence = &m_swap_chain_handle->m_frame_in_flight->at(current_frame);
+            vk::CommandBuffer* cmd = &m_cmd_buffer->at(m_current_frame);
+            vk::Semaphore* image_ready = &m_swap_chain_handle->m_image_available->at(m_current_frame);
+            vk::Semaphore* render_finished = &m_swap_chain_handle->m_render_finished->at(m_current_frame);
+            vk::Fence* render_finished_fence = &m_swap_chain_handle->m_frame_in_flight->at(m_current_frame);
 
             // the semaphores to wait on before drawing to the render target
             std::vector<vk::Semaphore> wait_on({*image_ready});
 
             // record the command buffer
-            recordCommandBuffer(cmd, m_vbo);
+            recordCommandBuffer(cmd, m_vbo, m_ubo);
 
 			// submit the command buffer
 			submitCommandBuffer(cmd, &wait_on, render_finished, render_finished_fence);
@@ -318,7 +353,7 @@ namespace undicht {
 
 		/////////////////////////////////////// private draw functions ////////////////////////////
 
-        void Renderer::recordCommandBuffer(vk::CommandBuffer* cmd_buffer, const VertexBuffer* vbo) {
+        void Renderer::recordCommandBuffer(vk::CommandBuffer* cmd_buffer, const VertexBuffer* vbo, const UniformBuffer* ubo) {
 
             // getting the framebuffer that gets drawn to
             int image_index = m_swap_chain_handle->getCurrentImageID();
@@ -344,6 +379,8 @@ namespace undicht {
             cmd_buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *m_pipeline);
             cmd_buffer->bindVertexBuffers(0, *vbo->m_vertex_data.m_buffer, {0});
             if(vbo->usesInstancing())cmd_buffer->bindVertexBuffers(1, *vbo->m_instance_data.m_buffer, {0});
+            if(ubo) cmd_buffer->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *m_layout, 0, ubo->m_descriptor_sets->at(m_current_frame),
+                                                   nullptr);
 
             if(vbo->usesIndices()) {
                 cmd_buffer->bindIndexBuffer(*m_vbo->m_index_data.m_buffer, 0, vk::IndexType::eUint32);

@@ -11,6 +11,7 @@ namespace undicht {
         class GraphicsDevice;
         class VertexBuffer;
         class Renderer;
+        class UniformBuffer;
 
         class VramBuffer {
 
@@ -29,9 +30,11 @@ namespace undicht {
             friend GraphicsDevice;
             friend VertexBuffer;
             friend Renderer;
+            friend UniformBuffer;
 
             const GraphicsDevice* m_device_handle = 0;
 
+            VramBuffer() = default;
             VramBuffer(const GraphicsDevice* device);
 
             virtual void cleanUp();

@@ -24,6 +24,7 @@
 #include "graphics_pipeline/vulkan/renderer.h"
 #include "graphics_pipeline/vulkan/render_subpass.h"
 #include "graphics_pipeline/vulkan/vertex_buffer.h"
+#include "graphics_pipeline/vulkan/uniform_buffer.h"
 #endif // USE_VULKAN
 
 #endif // UNDICHT_GRAPHICS_H

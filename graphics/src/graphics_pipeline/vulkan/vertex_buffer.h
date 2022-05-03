@@ -77,9 +77,13 @@ namespace undicht {
         public:
             // setting data
 
-            void setVertexData(const std::vector<float>& data);
-            void setIndexData(const std::vector<uint32_t>& data);
-            void setInstanceData(const std::vector<float>& data);
+            void setVertexData(const std::vector<float>& data, uint32_t offset = 0);
+            void setIndexData(const std::vector<uint32_t>& data, uint32_t offset = 0);
+            void setInstanceData(const std::vector<float>& data, uint32_t offset = 0);
+
+            void setVertexData(const void* data, uint32_t byte_size , uint32_t offset);
+            void setIndexData(const void* data, uint32_t byte_size, uint32_t offset);
+            void setInstanceData(const void* data, uint32_t byte_size, uint32_t offset);
 
             bool usesIndices() const;
             bool usesInstancing() const;

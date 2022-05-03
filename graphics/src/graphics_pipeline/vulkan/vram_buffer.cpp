@@ -28,7 +28,6 @@ namespace undicht {
             delete m_buffer;
             delete m_memory;
             delete m_transfer_cmd_pool;
-
         }
 
         void VramBuffer::cleanUp() {
@@ -65,7 +64,7 @@ namespace undicht {
             // makes sure that the buffer has at least a size of byte_size
 
             // checking if a new memory allocation is necessary
-            if(byte_size < getSize())
+            if(byte_size <= getSize())
                 return; // nothing to be done
 
             // if the buffer has no allocated memory
@@ -83,7 +82,20 @@ namespace undicht {
             new_buffer.setData(*this, m_byte_size, 0, 0);
 
             // swapping *this and new_buffer
+            // while swapping no vulkan objects should be destroyed
+            // this is why the device handles are set to 0 while swapping
+            // not quite as sophisticated as "the rule of three"
+            // but faster
+            // besides, no objects with vulkan handles should ever be copied
+            // this is literary the only exception (at least for the moment)
+            // edit: there is one more exception now: in the uniform buffer class, when creating a vector of VramBuffers
+            // it just works (and im going to regret it at some point)
+            const GraphicsDevice* tmp = m_device_handle;
+            m_device_handle = 0;
+            new_buffer.m_device_handle = 0;
             std::swap(*this, new_buffer);
+            new_buffer.m_device_handle = tmp;
+            m_device_handle = tmp;
 
         }
 

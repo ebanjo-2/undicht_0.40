@@ -109,6 +109,11 @@ namespace undicht {
             return VertexBuffer(this);
         }
 
+        UniformBuffer GraphicsDevice::createUniformBuffer() const {
+
+            return UniformBuffer(this);
+        }
+
     }
 
 } // namespace undicht

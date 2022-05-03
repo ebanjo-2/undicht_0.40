@@ -103,7 +103,7 @@ namespace undicht {
 			uint32_t getCurrentFrameID() const;
             int getCurrentImageID() const;
 
-			void beginFrame();
+			uint32_t beginFrame();
 			void endFrame();
 	
 		};

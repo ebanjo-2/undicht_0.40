@@ -191,33 +191,46 @@ namespace undicht {
 
     ////////////////////////////////////////// setting data ////////////////////////////////////////
 
-        void VertexBuffer::setVertexData(const std::vector<float>& data) {
+        void VertexBuffer::setVertexData(const std::vector<float>& data, uint32_t offset) {
 
-            // storing the data in the transfer buffer
-            m_transfer_data.setData(data.data(), data.size() * sizeof(float), 0);
-
-            // copying the data to the vertex buffer (on cpu invisible but faster gpu memory)
-            m_vertex_data.setData(m_transfer_data, data.size() * sizeof(float), 0, 0);
-
+            setVertexData(data.data(), data.size() * sizeof(float), offset);
         }
 
-        void VertexBuffer::setIndexData(const std::vector<uint32_t>& data) {
+        void VertexBuffer::setIndexData(const std::vector<uint32_t>& data, uint32_t offset) {
 
-            // storing the data in the transfer buffer
-            m_transfer_data.setData(data.data(), data.size() * sizeof(uint32_t), 0);
-
-            // copying the data to the vertex buffer (on cpu invisible but faster gpu memory)
-            m_index_data.setData(m_transfer_data, data.size() * sizeof(uint32_t), 0, 0);
-
+            setIndexData(data.data(), data.size() * sizeof(uint32_t), offset);
         }
 
-        void VertexBuffer::setInstanceData(const std::vector<float> &data) {
+        void VertexBuffer::setInstanceData(const std::vector<float> &data, uint32_t offset) {
+
+            setInstanceData(data.data(), data.size() * sizeof(float), offset);
+        }
+
+        void VertexBuffer::setVertexData(const void* data, uint32_t byte_size , uint32_t offset) {
 
             // storing the data in the transfer buffer
-            m_transfer_data.setData(data.data(), data.size() * sizeof(float), 0);
+            m_transfer_data.setData(data, byte_size, 0);
 
             // copying the data to the vertex buffer (on cpu invisible but faster gpu memory)
-            m_instance_data.setData(m_transfer_data, data.size() * sizeof(float), 0, 0);
+            m_vertex_data.setData(m_transfer_data, byte_size, 0, offset);
+        }
+
+        void VertexBuffer::setIndexData(const void* data, uint32_t byte_size, uint32_t offset) {
+
+            // storing the data in the transfer buffer
+            m_transfer_data.setData(data, byte_size, 0);
+
+            // copying the data to the vertex buffer (on cpu invisible but faster gpu memory)
+            m_index_data.setData(m_transfer_data, byte_size, 0, offset);
+        }
+
+        void VertexBuffer::setInstanceData(const void* data, uint32_t byte_size, uint32_t offset) {
+
+            // storing the data in the transfer buffer
+            m_transfer_data.setData(data, byte_size, 0);
+
+            // copying the data to the vertex buffer (on cpu invisible but faster gpu memory)
+            m_instance_data.setData(m_transfer_data, byte_size, 0, offset);
         }
 
         bool VertexBuffer::usesIndices() const {
@@ -229,7 +242,6 @@ namespace undicht {
 
             return m_instance_data.getSize();
         }
-
 
         uint32_t VertexBuffer::getVertexCount() const {
 

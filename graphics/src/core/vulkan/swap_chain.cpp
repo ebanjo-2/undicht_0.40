@@ -330,7 +330,7 @@ namespace undicht {
             return m_current_image;
         }
 
-		void SwapChain::beginFrame() {
+        uint32_t SwapChain::beginFrame() {
 
             int current_frame = getCurrentFrameID();
 
@@ -341,7 +341,7 @@ namespace undicht {
 			// acquire new swap chain image
             m_current_image = m_device_handle->acquireNextImageKHR(*m_swap_chain, UINT64_MAX,m_image_available->at(current_frame));
 
-
+            return getCurrentFrameID();
 		}
 
 		void SwapChain::endFrame() {
