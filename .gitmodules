@@ -1,3 +1,6 @@
 [submodule "graphics/extern/glfw"]
 	path = graphics/extern/glfw
 	url = https://github.com/ebanjo-2/glfw.git
+[submodule "tools/extern/stb"]
+	path = tools/extern/stb
+	url = https://github.com/ebanjo-2/stb.git

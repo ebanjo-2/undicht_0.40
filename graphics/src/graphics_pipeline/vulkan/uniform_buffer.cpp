@@ -62,19 +62,18 @@ namespace undicht {
             info.setDescriptorSetCount(count);
 
             // allocate descriptor sets (destroyed when the descriptor pool is destroyed)
-            //m_descriptor_sets->resize(count); // unnecessary i think
             *m_descriptor_sets = m_device_handle->m_device->allocateDescriptorSets(info);
 
             // tell the descriptor sets about the buffers
-            VkDescriptorBufferInfo buffer_info;
+            vk::DescriptorBufferInfo buffer_info;
             buffer_info.offset = 0;
             buffer_info.range = m_tmp_buffer.size();
 
-            VkWriteDescriptorSet descriptor_write{};
-            descriptor_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            vk::WriteDescriptorSet descriptor_write;
             descriptor_write.dstBinding = 0;
+            descriptor_write.pBufferInfo = &buffer_info;
             descriptor_write.dstArrayElement = 0;
-            descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+            descriptor_write.descriptorType = vk::DescriptorType::eUniformBuffer;
             descriptor_write.descriptorCount = 1;
             descriptor_write.pImageInfo = nullptr;
             descriptor_write.pTexelBufferView = nullptr;
@@ -82,10 +81,9 @@ namespace undicht {
             for(int i = 0; i < count; i++) {
 
                 buffer_info.buffer = *m_buffers.at(i).m_buffer;
-                descriptor_write.pBufferInfo = &buffer_info;
                 descriptor_write.dstSet = m_descriptor_sets->at(i);
 
-                vkUpdateDescriptorSets(*m_device_handle->m_device, 1, & descriptor_write, 0, nullptr);
+                m_device_handle->m_device->updateDescriptorSets(descriptor_write, nullptr);
             }
 
         }
@@ -213,7 +211,6 @@ namespace undicht {
             std::copy((const char*)data, (const char*)data + byte_size, m_tmp_buffer.begin() + m_offsets.at(index));
 
             std::fill(m_buffers_updated.begin(), m_buffers_updated.end(), false);
-
         }
 
     } // graphics

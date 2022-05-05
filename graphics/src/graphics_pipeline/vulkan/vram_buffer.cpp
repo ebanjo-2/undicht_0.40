@@ -12,8 +12,6 @@ namespace undicht {
             m_mem_properties = new vk::MemoryPropertyFlags;
             m_buffer = new vk::Buffer;
             m_memory = new vk::DeviceMemory;
-            m_transfer_cmd_pool = new vk::CommandPool;
-
         }
 
         VramBuffer::~VramBuffer() {
@@ -27,15 +25,12 @@ namespace undicht {
             delete m_mem_properties;
             delete m_buffer;
             delete m_memory;
-            delete m_transfer_cmd_pool;
         }
 
         void VramBuffer::cleanUp() {
 
             m_device_handle->m_device->freeMemory(*m_memory);
             m_device_handle->m_device->destroyBuffer(*m_buffer);
-            m_device_handle->m_device->destroyCommandPool(*m_transfer_cmd_pool);
-
         }
 
         ////////////////////////////////////////// specifying usage //////////////////////////////////////////
@@ -54,7 +49,6 @@ namespace undicht {
             if(std::find(m_queue_ids.begin(), m_queue_ids.end(), m_device_handle->m_transfer_queue_id) == m_queue_ids.end())
                 m_queue_ids.push_back(m_device_handle->m_transfer_queue_id); // needed to copy data between buffers
 
-            createCommandPool();
         }
 
 
@@ -123,7 +117,7 @@ namespace undicht {
             // filling out the allocation info
             vk::MemoryAllocateInfo allocate_info;
             allocate_info.allocationSize = requirements.size; // comes from the buffer
-            allocate_info.memoryTypeIndex = findMemory(memory_type);
+            allocate_info.memoryTypeIndex = m_device_handle->findMemory(memory_type);
 
             // allocating the memory
             *m_memory = m_device_handle->m_device->allocateMemory(allocate_info);
@@ -131,38 +125,6 @@ namespace undicht {
             // binding the memory to the buffer
             m_device_handle->m_device->bindBufferMemory(*m_buffer, *m_memory, 0);
 
-        }
-
-        void VramBuffer::createCommandPool() {
-
-            vk::CommandPoolCreateInfo info;
-            info.setFlags(vk::CommandPoolCreateFlagBits::eResetCommandBuffer);
-            info.setQueueFamilyIndex(m_device_handle->m_transfer_queue_id);
-
-            *m_transfer_cmd_pool = m_device_handle->m_device->createCommandPool(info);
-
-        }
-
-        uint32_t VramBuffer::findMemory(const vk::MemoryType& type) const {
-            // finds the right memory type for your needs
-
-            // getting the physical devices memory properties
-            vk::PhysicalDeviceMemoryProperties properties;
-            properties = m_device_handle->m_physical_device->getMemoryProperties();
-
-            // searching for the right memory
-            for(int i = 0; i < properties.memoryTypeCount; i++) {
-
-                if(!((1 << i) & type.heapIndex))
-                    continue; // heapIndex is used as a bitfield which specifies the types that can be used
-
-                if(properties.memoryTypes.at(i).propertyFlags == type.propertyFlags)
-                    return i;
-
-            }
-
-            UND_ERROR << "failed to find the right type of vram\n";
-            return 0;
         }
 
         ///////////////////////////////////////////////// storing data /////////////////////////////////////////////////
@@ -189,26 +151,16 @@ namespace undicht {
             reserve(byte_size + dst_offset);
 
             // create a command buffer
-            vk::CommandBufferAllocateInfo cmd_allocate_info(*m_transfer_cmd_pool, vk::CommandBufferLevel::ePrimary, 1);
-            vk::CommandBuffer transfer_cmd = m_device_handle->m_device->allocateCommandBuffers(cmd_allocate_info)[0];
+            vk::Queue* queue = m_device_handle->m_transfer_queue;
+            vk::CommandPool* cmd_pool = m_device_handle->m_transfer_command_pool;
+            vk::CommandBuffer transfer_cmd = m_device_handle->beginSingleTimeCommand(*cmd_pool);
 
-            // recording the transfer command
-            vk::CommandBufferBeginInfo begin_info(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
-            transfer_cmd.begin(begin_info);
-
+            // transfer commands
             vk::BufferCopy copy_info(src_offset, dst_offset, byte_size);
             transfer_cmd.copyBuffer(*data.m_buffer, *m_buffer, copy_info);
 
-            transfer_cmd.end();
-
             // submitting the transfer command
-            vk::SubmitInfo submit_info;
-            submit_info.setCommandBuffers(transfer_cmd);
-            m_device_handle->m_transfer_queue->submit(submit_info);
-            m_device_handle->m_transfer_queue->waitIdle(); // waiting for the transfer to finish
-
-            // destroying the command buffer
-            m_device_handle->m_device->freeCommandBuffers(*m_transfer_cmd_pool, transfer_cmd);
+            m_device_handle->endSingleTimeCommand(transfer_cmd, *cmd_pool, *queue);
         }
 
         uint32_t VramBuffer::getSize() const {

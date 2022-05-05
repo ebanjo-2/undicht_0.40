@@ -12,6 +12,7 @@ namespace undicht {
         class VertexBuffer;
         class Renderer;
         class UniformBuffer;
+        class Texture;
 
         class VramBuffer {
 
@@ -23,14 +24,13 @@ namespace undicht {
             vk::MemoryPropertyFlags* m_mem_properties = 0;
             std::vector<uint32_t> m_queue_ids; // ids of the queue families that can use this buffer
 
-            vk::CommandPool* m_transfer_cmd_pool = 0; // used to copy data between buffers
-
             uint32_t m_byte_size = 0;
 
             friend GraphicsDevice;
             friend VertexBuffer;
             friend Renderer;
             friend UniformBuffer;
+            friend Texture;
 
             const GraphicsDevice* m_device_handle = 0;
 
@@ -54,12 +54,6 @@ namespace undicht {
             // makes sure that the buffer has at least a size of byte_size
             void reserve(uint32_t byte_size);
             void allocate(uint32_t byte_size);
-
-            void createCommandPool();
-        private:
-
-            // finds the right memory type for your needs
-            uint32_t findMemory(const vk::MemoryType& type) const;
 
         protected:
             // storing data

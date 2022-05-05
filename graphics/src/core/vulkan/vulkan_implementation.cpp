@@ -26,3 +26,4 @@
 #include "graphics_pipeline/vulkan/vram_buffer.cpp"
 #include "graphics_pipeline/vulkan/vertex_buffer.cpp"
 #include "graphics_pipeline/vulkan/uniform_buffer.cpp"
+#include "graphics_pipeline/vulkan/texture.cpp"

@@ -11,7 +11,7 @@
 #include "graphics_pipeline/vulkan/renderer.h"
 #include "graphics_pipeline/vulkan/vertex_buffer.h"
 #include "graphics_pipeline/vulkan/uniform_buffer.h"
-
+#include "graphics_pipeline/vulkan/texture.h"
 
 namespace undicht {
 
@@ -30,6 +30,7 @@ namespace undicht {
         class VertexBuffer;
         class VramBuffer;
         class UniformBuffer;
+        class Texture;
 
         class GraphicsDevice {
 
@@ -42,7 +43,7 @@ namespace undicht {
             friend VertexBuffer;
             friend VramBuffer;
             friend UniformBuffer;
-
+            friend Texture;
 
             vk::PhysicalDevice* m_physical_device = 0;
             vk::Device * m_device = 0;
@@ -57,15 +58,35 @@ namespace undicht {
 
 			std::set<uint32_t> m_unique_queue_family_ids;
 
+            // command pools
+            vk::CommandPool* m_graphics_command_pool = 0; // commands for the graphics queue
+            vk::CommandPool* m_transfer_command_pool = 0; // commands for the transfer queue
+
             // only the graphics api can create GraphicsDevice objects
             GraphicsDevice(vk::PhysicalDevice device, vk::SurfaceKHR* surface, QueueFamilyIDs queue_families, const std::vector<const char*>& extensions);
-
-            void retrieveQueueHandles();
-            std::vector<vk::DeviceQueueCreateInfo> getQueueCreateInfos(float* priority);
 
         public:
 
             ~GraphicsDevice();
+
+        private:
+            // initializing the GraphicsDevice
+
+            void retrieveQueueHandles();
+
+            std::vector<vk::DeviceQueueCreateInfo> getQueueCreateInfos(float* priority);
+
+            void initCmdPools();
+
+        private:
+            // interface for other vulkan class
+
+            // finds the right memory type for your needs
+            uint32_t findMemory(const vk::MemoryType& type) const;
+            vk::CommandBuffer beginSingleTimeCommand(vk::CommandPool cmd_pool) const;
+            void endSingleTimeCommand(vk::CommandBuffer cmd_buffer, vk::CommandPool cmd_pool, vk::Queue queue) const;
+
+            uint32_t getAnisotropyLimit() const;
 
         public:
             // interface
@@ -81,6 +102,7 @@ namespace undicht {
 			Renderer createRenderer() const;
             VertexBuffer createVertexBuffer() const;
             UniformBuffer createUniformBuffer() const;
+            Texture createTexture() const;
 
           private:
 

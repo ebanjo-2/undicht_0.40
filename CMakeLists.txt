@@ -12,6 +12,7 @@ set (CMAKE_CXX_STANDARD 11)
 # adding libraries
 add_subdirectory(core)
 add_subdirectory(graphics)
+add_subdirectory(tools)
 
 # adding examples
 add_subdirectory(examples/hello_world)

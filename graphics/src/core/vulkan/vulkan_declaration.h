@@ -45,6 +45,8 @@ namespace vk {
     class DescriptorSetLayout;
     class DescriptorPool;
     class DescriptorSet;
+    class ImageCreateInfo;
+    class Sampler;
 
     // flags
     template<typename T> class Flags;

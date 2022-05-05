@@ -37,6 +37,7 @@ set(GRAPHICS_PIPELINE_SOURCES
 		src/graphics_pipeline/vulkan/vram_buffer.h
 		src/graphics_pipeline/vulkan/vertex_buffer.h
 		src/graphics_pipeline/vulkan/uniform_buffer.h
+		src/graphics_pipeline/vulkan/texture.h
 
 )
 

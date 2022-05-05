@@ -16,17 +16,15 @@ namespace undicht {
 		Renderer::Renderer(const GraphicsDevice* device) {
 
 			// storing handles
-			m_device_handle = device->m_device;
-            m_graphics_queue_index = device->m_graphics_queue_id;
-			m_graphics_queue_handle = device->m_graphics_queue;
+			m_device_handle = device;
+
 
             // settings
             m_vertex_bindings = new std::vector<vk::VertexInputBindingDescription>;
             m_vertex_attributes = new std::vector<vk::VertexInputAttributeDescription>;
-            m_uniform_buffer_layout = new vk::DescriptorSetLayout;
+            m_shader_layout = new vk::DescriptorSetLayout;
 
-			// creating the command pool
-			m_graphics_cmds = new vk::CommandPool;
+			// creating the command buffers
 			m_cmd_buffer = new std::vector<vk::CommandBuffer>;
 
 			// creating other member objects
@@ -44,11 +42,10 @@ namespace undicht {
             // settings
             delete m_vertex_bindings;
             delete m_vertex_attributes;
-            delete m_uniform_buffer_layout;
+            delete m_shader_layout;
 
             // actual pipeline objects
             delete m_swap_frame_buffers;
-			delete m_graphics_cmds;
 			delete m_cmd_buffer;
 			delete m_layout;
 			delete m_render_pass;
@@ -60,15 +57,14 @@ namespace undicht {
             // you then can change some of the settings, and link the pipeline once more
             // to use it again
 
-            m_device_handle->waitIdle();
+            m_device_handle->m_device->waitIdle();
 
             for(vk::Framebuffer fbo : (*m_swap_frame_buffers))
-                m_device_handle->destroyFramebuffer(fbo);
+                m_device_handle->m_device->destroyFramebuffer(fbo);
 
-            m_device_handle->destroyCommandPool(*m_graphics_cmds);
-            m_device_handle->destroyPipelineLayout(*m_layout);
-            m_device_handle->destroyRenderPass(*m_render_pass);
-            m_device_handle->destroyPipeline(*m_pipeline);
+            m_device_handle->m_device->destroyPipelineLayout(*m_layout);
+            m_device_handle->m_device->destroyRenderPass(*m_render_pass);
+            m_device_handle->m_device->destroyPipeline(*m_pipeline);
 
         }
 
@@ -83,7 +79,6 @@ namespace undicht {
 
 			createRenderPass();
 			createSwapChainFrameBuffers();
-            createCommandPool();
 			createCommandBuffers();
 
 			// info about the fixed pipeline stages
@@ -102,8 +97,8 @@ namespace undicht {
 			vk::PipelineDynamicStateCreateInfo dynamic_state({}, dynamic_states); 
 			
 			// creating the pipeline layout (shader uniforms)
-			vk::PipelineLayoutCreateInfo pipeline_layout = getUniformLayout();
-            *m_layout = m_device_handle->createPipelineLayout(pipeline_layout);
+			vk::PipelineLayoutCreateInfo pipeline_layout = getShaderInputLayout();
+            *m_layout = m_device_handle->m_device->createPipelineLayout(pipeline_layout);
 
             // creating the pipeline
 			vk::GraphicsPipelineCreateInfo pipeline_info({}, *m_shader_handle->m_stages);
@@ -121,7 +116,7 @@ namespace undicht {
 			pipeline_info.setSubpass(0); // index of the subpass
 				
 			vk::Result result;
-			std::tie(result, *m_pipeline) = m_device_handle->createGraphicsPipeline(nullptr, pipeline_info);
+			std::tie(result, *m_pipeline) = m_device_handle->m_device->createGraphicsPipeline(nullptr, pipeline_info);
 
 			if(result != vk::Result::eSuccess)
 				UND_ERROR << "failed to create graphics pipeline\n";
@@ -178,7 +173,7 @@ namespace undicht {
 
 			// creating the render pass
 			vk::RenderPassCreateInfo render_pass_info({}, attachments, subpasses, subpass_dependencies);
-			*m_render_pass = m_device_handle->createRenderPass(render_pass_info);
+			*m_render_pass = m_device_handle->m_device->createRenderPass(render_pass_info);
 
 		}	
 
@@ -194,19 +189,10 @@ namespace undicht {
 				fbo_info.setHeight(m_swap_chain_handle->getHeight());
 				fbo_info.setLayers( 1);
 
-				m_swap_frame_buffers->at(i) = m_device_handle->createFramebuffer(fbo_info);
+				m_swap_frame_buffers->at(i) = m_device_handle->m_device->createFramebuffer(fbo_info);
 			}
 
 		}
-
-        void Renderer::createCommandPool() {
-
-            vk::CommandPoolCreateInfo cmd_pool_info;
-            cmd_pool_info.setFlags(vk::CommandPoolCreateFlagBits::eResetCommandBuffer);
-            cmd_pool_info.setQueueFamilyIndex(m_graphics_queue_index);
-            *m_graphics_cmds = m_device_handle->createCommandPool(cmd_pool_info);
-
-        }
 
 		void Renderer::createCommandBuffers() {
 
@@ -216,8 +202,8 @@ namespace undicht {
             }
 
             // creating a command buffer for each frame in flight
-			vk::CommandBufferAllocateInfo allocate_info(*m_graphics_cmds, vk::CommandBufferLevel::ePrimary, m_max_frames_in_flight);
-			*m_cmd_buffer = m_device_handle->allocateCommandBuffers(allocate_info);
+			vk::CommandBufferAllocateInfo allocate_info(*m_device_handle->m_graphics_command_pool, vk::CommandBufferLevel::ePrimary, m_max_frames_in_flight);
+			*m_cmd_buffer = m_device_handle->m_device->allocateCommandBuffers(allocate_info);
 
 		}
 
@@ -236,7 +222,6 @@ namespace undicht {
 
         void Renderer::setUniformBufferLayout(const UniformBuffer& ubo_prototype) {
 
-            *m_uniform_buffer_layout = *ubo_prototype.m_descriptor_layout;
             m_use_uniform_buffer = true;
         }
 
@@ -301,14 +286,31 @@ namespace undicht {
             return scissor;
         }
 
-        vk::PipelineLayoutCreateInfo Renderer::getUniformLayout() const {
+        vk::PipelineLayoutCreateInfo Renderer::getShaderInputLayout() const {
 
             vk::PipelineLayoutCreateInfo pipeline_layout;
 
-            if(!m_use_uniform_buffer)
-                return pipeline_layout;
+            vk::DescriptorSetLayoutBinding uniform_layout_binding;
+            uniform_layout_binding.descriptorType = vk::DescriptorType::eUniformBuffer;
+            uniform_layout_binding.descriptorCount = 1;
+            uniform_layout_binding.stageFlags = vk::ShaderStageFlagBits::eAllGraphics;
+            uniform_layout_binding.binding = 0;
 
-            pipeline_layout.pSetLayouts = m_uniform_buffer_layout;
+            vk::DescriptorSetLayoutBinding sampler_layout_binding;
+            sampler_layout_binding.binding = 1;
+            sampler_layout_binding.descriptorCount = 1;
+            sampler_layout_binding.descriptorType = vk::DescriptorType::eCombinedImageSampler;
+            sampler_layout_binding.pImmutableSamplers = nullptr;
+            sampler_layout_binding.stageFlags = vk::ShaderStageFlagBits::eFragment;
+
+            /** TODO */
+
+            std::vector<vk::DescriptorSetLayoutBinding> bindings = {uniform_layout_binding, sampler_layout_binding};
+
+            vk::DescriptorSetLayoutCreateInfo layout_info({}, bindings);
+            *m_shader_layout = m_device_handle->m_device->createDescriptorSetLayout(layout_info);
+
+            pipeline_layout.pSetLayouts = m_shader_layout;
             pipeline_layout.setLayoutCount = 1;
 
             return pipeline_layout;
@@ -326,6 +328,11 @@ namespace undicht {
         void Renderer::submit(const VertexBuffer &vbo) {
 
             m_vbo = &vbo;
+        }
+
+        void Renderer::submit(const Texture& tex) {
+
+
         }
 
 		void Renderer::draw() {
@@ -408,7 +415,7 @@ namespace undicht {
 			std::vector<vk::CommandBuffer> cmd_buffers({*cmd_buffer});
 
 			vk::SubmitInfo submit_info(*wait_on, wait_stages, cmd_buffers, signal_once_finished);
-			m_graphics_queue_handle->submit(1, &submit_info, *render_finished_fence);
+			m_device_handle->m_graphics_queue->submit(1, &submit_info, *render_finished_fence);
 
 		}
 

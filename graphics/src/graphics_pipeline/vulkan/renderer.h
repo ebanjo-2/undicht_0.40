@@ -9,6 +9,7 @@
 #include "graphics_pipeline/vulkan/render_subpass.h"
 #include "graphics_pipeline/vulkan/vertex_buffer.h"
 #include "graphics_pipeline/vulkan/uniform_buffer.h"
+#include "graphics_pipeline/vulkan/texture.h"
 
 namespace undicht {
 
@@ -23,7 +24,7 @@ namespace undicht {
 			// pipeline layout (settings)
             std::vector<vk::VertexInputBindingDescription>* m_vertex_bindings = 0;
             std::vector<vk::VertexInputAttributeDescription>* m_vertex_attributes = 0;
-            vk::DescriptorSetLayout* m_uniform_buffer_layout = 0;
+            vk::DescriptorSetLayout* m_shader_layout = 0;
             bool m_use_uniform_buffer = false;
 			vk::PipelineLayout* m_layout = 0;
 
@@ -41,7 +42,6 @@ namespace undicht {
 			std::vector<vk::Framebuffer> *m_swap_frame_buffers = 0;
 
 			// command pool
-			vk::CommandPool* m_graphics_cmds = 0;
 			std::vector<vk::CommandBuffer>* m_cmd_buffer = 0;
 
             // currently submitted objects
@@ -51,10 +51,8 @@ namespace undicht {
             uint32_t m_max_frames_in_flight = 1;
             uint32_t m_current_frame = 0;
 
-			vk::Device* m_device_handle = 0;
-            uint32_t m_graphics_queue_index = 0;
-			vk::Queue* m_graphics_queue_handle = 0;
-			Shader* m_shader_handle = 0;
+			const GraphicsDevice* m_device_handle = 0;
+			const Shader* m_shader_handle = 0;
 			
 			friend GraphicsDevice;
 
@@ -82,7 +80,6 @@ namespace undicht {
 
 			void createRenderPass();
 			void createSwapChainFrameBuffers();
-            void createCommandPool();
 			void createCommandBuffers();
 
 		public:
@@ -104,13 +101,14 @@ namespace undicht {
             vk::PipelineVertexInputStateCreateInfo getVertexInputState() const;
             vk::Viewport getViewport() const;
             vk::Rect2D getScissor() const; // the part of the viewport that gets displayed
-            vk::PipelineLayoutCreateInfo getUniformLayout() const;
+            vk::PipelineLayoutCreateInfo getShaderInputLayout() const;
 
         public:
 			// drawing
 
             void submit(const VertexBuffer& vbo);
             void submit(const UniformBuffer& ubo);
+            void submit(const Texture& tex);
 
 			void draw();
 

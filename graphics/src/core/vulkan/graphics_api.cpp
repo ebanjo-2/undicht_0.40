@@ -124,6 +124,9 @@ namespace undicht {
             if (!features.geometryShader)
                 return 0;
 
+            if(!features.samplerAnisotropy)
+                return 0;
+
             return score;
         }
 	

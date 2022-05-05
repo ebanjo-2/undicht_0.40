@@ -2,6 +2,8 @@
 
 #include "debug.h"
 #include "undicht_graphics.h"
+#include "images/image_file.h"
+
 #include "time.h"
 
 using namespace undicht;
@@ -61,8 +63,10 @@ int main() {
 	renderer.setRenderTarget(&swap_chain);
 	renderer.linkPipeline();
 
-    while(!window.shouldClose()) {
+    Texture texture = gpu.createTexture();
+    tools::ImageFile(PROJECT_DIR + "res/Tux.jpg", texture);
 
+    while(!window.shouldClose()) {
 
 		// begin new frame
 		uint32_t current_frame = swap_chain.beginFrame();
