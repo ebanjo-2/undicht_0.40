@@ -9,7 +9,7 @@
 
 #define UND_WARNING std::cout << "WARNING: " << " from " << __FILE__ << "\n    "
 
-#define UND_LOG std::cout << "Note: " << "\n    "
+#define UND_LOG std::cout << std::flush << "Note: " << "\n    "
 
 
 #endif // DEBUG_H

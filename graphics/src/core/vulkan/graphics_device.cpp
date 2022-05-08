@@ -194,11 +194,6 @@ namespace undicht {
             return VertexBuffer(this);
         }
 
-        Texture GraphicsDevice::createTexture() const {
-
-            return Texture(this);
-        }
-
     }
 
 } // namespace undicht

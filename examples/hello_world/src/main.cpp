@@ -20,7 +20,7 @@ int main() {
 	Window window("Hello World");
 
 	GraphicsAPI graphics_api;
-	GraphicsSurface canvas = graphics_api.createGraphicsSurface(window);
+    GraphicsSurface canvas = graphics_api.createGraphicsSurface(window);
 	GraphicsDevice gpu = graphics_api.getGraphicsDevice(canvas);
 	SwapChain swap_chain = graphics_api.createSwapChain(gpu, canvas);
 	swap_chain.setMaxFramesInFlight(MAX_FRAMES_IN_FLIGHT);
@@ -52,18 +52,18 @@ int main() {
     renderer.setMaxFramesInFlight(MAX_FRAMES_IN_FLIGHT);
     renderer.setVertexBufferLayout(vbo);
 	renderer.setShader(&shader);
-    renderer.setShaderInput(1, 0);
+    renderer.setShaderInput(1, 1);
 	renderer.setRenderTarget(&swap_chain);
 	renderer.linkPipeline();
 
-    UniformBuffer uniforms = renderer.createUniformBuffer();
+    UniformBuffer uniforms = renderer.createUniformBuffer(0);
     uniforms.setMaxFramesInFlight(MAX_FRAMES_IN_FLIGHT); // has an internal buffer for every frame
     uniforms.setAttribute(0, UND_FLOAT32); // time
     uniforms.setAttribute(1, UND_VEC2F); // var
     uniforms.setAttribute(2, UND_VEC4F); // color
     uniforms.finalizeLayout();
 
-    Texture texture = gpu.createTexture();
+    Texture texture = renderer.createTexture(1);
     tools::ImageFile(PROJECT_DIR + "res/Tux.jpg", texture);
 
     while(!window.shouldClose()) {
@@ -82,6 +82,7 @@ int main() {
 		// draw
         renderer.submit(&vbo);
         renderer.submit(&uniforms, 0);
+        renderer.submit(&texture, 1);
         renderer.draw();
 
 		// present
@@ -97,7 +98,8 @@ int main() {
         }
 
         // checking if the window is minimized
-        if(window.isMinimized()) {
+        while (window.isMinimized()) {
+            UND_LOG << "waiting \n";
             window.update();
         }
 

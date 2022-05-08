@@ -10,6 +10,7 @@ namespace undicht {
     namespace graphics {
 
         class GraphicsDevice;
+        class Renderer;
 
         class Texture {
         private:
@@ -29,9 +30,12 @@ namespace undicht {
             VramBuffer m_staging_buffer;
 
             friend GraphicsDevice;
+            friend Renderer;
             const GraphicsDevice* m_device_handle = 0;
+            const std::vector<vk::DescriptorSet>* m_descriptor_sets = 0;
+            uint32_t m_shader_binding = 0; // the index with which the ubo can be accessed in the shader
 
-            Texture(const GraphicsDevice* device);
+            Texture(const GraphicsDevice* device, const std::vector<vk::DescriptorSet>* shader_descriptors, uint32_t index);
 
             void cleanUp();
 
@@ -52,6 +56,8 @@ namespace undicht {
             void initStagingBuffer();
             void initImageView();
             void initSampler();
+
+            void initDescriptorSets();
 
             void allocate(uint32_t byte_size);
 

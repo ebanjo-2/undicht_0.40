@@ -18,12 +18,12 @@ namespace undicht {
 			// storing handles
 			m_device_handle = device;
 
-
             // settings
             m_vertex_bindings = new std::vector<vk::VertexInputBindingDescription>;
             m_vertex_attributes = new std::vector<vk::VertexInputAttributeDescription>;
             m_shader_layout = new vk::DescriptorSetLayout;
             m_shader_input_descriptor_pool = new vk::DescriptorPool;
+            m_shader_descriptors = new std::vector<vk::DescriptorSet>;
 
 			// creating the command buffers
 			m_cmd_buffer = new std::vector<vk::CommandBuffer>;
@@ -45,6 +45,7 @@ namespace undicht {
             delete m_vertex_attributes;
             delete m_shader_layout;
             delete m_shader_input_descriptor_pool;
+            delete m_shader_descriptors;
 
             // actual pipeline objects
             delete m_swap_frame_buffers;
@@ -61,15 +62,8 @@ namespace undicht {
 
             m_device_handle->m_device->waitIdle();
 
-            for(vk::Framebuffer fbo : (*m_swap_frame_buffers))
-                m_device_handle->m_device->destroyFramebuffer(fbo);
-
-            m_device_handle->m_device->destroyDescriptorPool(*m_shader_input_descriptor_pool);
-            m_device_handle->m_device->destroyDescriptorSetLayout(*m_shader_layout);
-
-            m_device_handle->m_device->destroyPipelineLayout(*m_layout);
-            m_device_handle->m_device->destroyRenderPass(*m_render_pass);
-            m_device_handle->m_device->destroyPipeline(*m_pipeline);
+            destroyStaticPipelineObjects();
+            destroyDynamicPipelineObjects();
 
         }
 
@@ -82,54 +76,86 @@ namespace undicht {
 				return;
 			}
 
-			createRenderPass();
-			createSwapChainFrameBuffers();
-			createCommandBuffers();
-            createShaderInputDescriptorPool();
-
-			// info about the fixed pipeline stages
-			vk::PipelineVertexInputStateCreateInfo vertex_input = getVertexInputState();
-			vk::PipelineInputAssemblyStateCreateInfo input_assembly({}, vk::PrimitiveTopology::eTriangleList, VK_FALSE);
-			vk::Viewport viewport = getViewport();
-			vk::Rect2D scissor = getScissor();
-			vk::PipelineViewportStateCreateInfo viewport_state({}, 1, &viewport, 1, &scissor);
-			vk::PipelineRasterizationStateCreateInfo rasterizer({}, VK_FALSE, VK_FALSE, vk::PolygonMode::eFill, vk::CullModeFlagBits::eNone, vk::FrontFace::eClockwise, VK_FALSE, 0.0f, 0.0f, 0.0f, 1.0f);	
-			vk::PipelineMultisampleStateCreateInfo multisample({}, vk::SampleCountFlagBits::e1, VK_FALSE, 1.0f, nullptr, VK_FALSE, VK_FALSE);
-		   	vk::PipelineColorBlendAttachmentState color_blend_attachment({}, vk::BlendFactor::eOne, vk::BlendFactor::eZero, vk::BlendOp::eAdd, vk::BlendFactor::eOne, vk::BlendFactor::eZero, vk::BlendOp::eAdd, vk::ColorComponentFlagBits::eA | vk::ColorComponentFlagBits::eB | vk::ColorComponentFlagBits::eG | vk::ColorComponentFlagBits::eR);
-			vk::PipelineColorBlendStateCreateInfo color_blending({}, VK_FALSE, vk::LogicOp::eCopy, 1, &color_blend_attachment, {0.0f, 0.0f, 0.0f, 0.0f});
-			
-			// settings that can be changed later
-			std::vector<vk::DynamicState> dynamic_states({vk::DynamicState::eViewport, vk::DynamicState::eLineWidth});
-			vk::PipelineDynamicStateCreateInfo dynamic_state({}, dynamic_states); 
-			
-			// creating the pipeline layout (shader uniforms)
-			vk::PipelineLayoutCreateInfo pipeline_layout = getShaderInputLayout();
-            *m_layout = m_device_handle->m_device->createPipelineLayout(pipeline_layout);
-
-            // creating the pipeline
-			vk::GraphicsPipelineCreateInfo pipeline_info({}, *m_shader_handle->m_stages);
-			pipeline_info.setPVertexInputState(&vertex_input);
-			pipeline_info.setPInputAssemblyState(&input_assembly);
-			pipeline_info.setPViewportState(&viewport_state);
-			pipeline_info.setPRasterizationState(&rasterizer);
-			pipeline_info.setPMultisampleState(&multisample);
-			pipeline_info.setPDepthStencilState(nullptr);
-			pipeline_info.setPColorBlendState(&color_blending);
-			pipeline_info.setPDynamicState(nullptr); // optional
-
-			pipeline_info.setLayout(*m_layout);
-			pipeline_info.setRenderPass(*m_render_pass);
-			pipeline_info.setSubpass(0); // index of the subpass
-				
-			vk::Result result;
-			std::tie(result, *m_pipeline) = m_device_handle->m_device->createGraphicsPipeline(nullptr, pipeline_info);
-
-			if(result != vk::Result::eSuccess)
-				UND_ERROR << "failed to create graphics pipeline\n";
+            initStaticPipelineObjects();
+            initDynamicPipelineObjects();
 
 		}
 
 		///////////////////////////////// private functions for creating the pipeline ///////////////////////////////////
+
+        void Renderer::initStaticPipelineObjects() {
+
+            createCommandBuffers();
+            createShaderInputLayout();
+            createShaderInputDescriptorPool();
+            createShaderInputDescriptors();
+        }
+
+        void Renderer::initDynamicPipelineObjects() {
+
+            createRenderPass(); // depends on swapchain images
+            createSwapChainFrameBuffers();
+
+            // info about the fixed pipeline stages
+            vk::PipelineVertexInputStateCreateInfo vertex_input = getVertexInputState();
+            vk::PipelineInputAssemblyStateCreateInfo input_assembly({}, vk::PrimitiveTopology::eTriangleList, VK_FALSE);
+            vk::Viewport viewport = getViewport();
+            vk::Rect2D scissor = getScissor();
+            vk::PipelineViewportStateCreateInfo viewport_state({}, 1, &viewport, 1, &scissor);
+            vk::PipelineRasterizationStateCreateInfo rasterizer({}, VK_FALSE, VK_FALSE, vk::PolygonMode::eFill, vk::CullModeFlagBits::eNone, vk::FrontFace::eClockwise, VK_FALSE, 0.0f, 0.0f, 0.0f, 1.0f);
+            vk::PipelineMultisampleStateCreateInfo multisample({}, vk::SampleCountFlagBits::e1, VK_FALSE, 1.0f, nullptr, VK_FALSE, VK_FALSE);
+            vk::PipelineColorBlendAttachmentState color_blend_attachment({}, vk::BlendFactor::eOne, vk::BlendFactor::eZero, vk::BlendOp::eAdd, vk::BlendFactor::eOne, vk::BlendFactor::eZero, vk::BlendOp::eAdd, vk::ColorComponentFlagBits::eA | vk::ColorComponentFlagBits::eB | vk::ColorComponentFlagBits::eG | vk::ColorComponentFlagBits::eR);
+            vk::PipelineColorBlendStateCreateInfo color_blending({}, VK_FALSE, vk::LogicOp::eCopy, 1, &color_blend_attachment, {0.0f, 0.0f, 0.0f, 0.0f});
+
+            // settings that can be changed later
+            std::vector<vk::DynamicState> dynamic_states({vk::DynamicState::eViewport, vk::DynamicState::eLineWidth});
+            vk::PipelineDynamicStateCreateInfo dynamic_state({}, dynamic_states);
+
+            // creating the pipeline layout (shader uniforms)
+            vk::PipelineLayoutCreateInfo pipeline_layout = getShaderInputLayout();
+            *m_layout = m_device_handle->m_device->createPipelineLayout(pipeline_layout);
+
+            // creating the pipeline
+            vk::GraphicsPipelineCreateInfo pipeline_info({}, *m_shader_handle->m_stages);
+            pipeline_info.setPVertexInputState(&vertex_input);
+            pipeline_info.setPInputAssemblyState(&input_assembly);
+            pipeline_info.setPViewportState(&viewport_state);
+            pipeline_info.setPRasterizationState(&rasterizer);
+            pipeline_info.setPMultisampleState(&multisample);
+            pipeline_info.setPDepthStencilState(nullptr);
+            pipeline_info.setPColorBlendState(&color_blending);
+            pipeline_info.setPDynamicState(nullptr); // optional
+
+            pipeline_info.setLayout(*m_layout);
+            pipeline_info.setRenderPass(*m_render_pass);
+            pipeline_info.setSubpass(0); // index of the subpass
+
+            vk::Result result;
+            std::tie(result, *m_pipeline) = m_device_handle->m_device->createGraphicsPipeline(nullptr, pipeline_info);
+
+            if(result != vk::Result::eSuccess)
+                UND_ERROR << "failed to create graphics pipeline\n";
+
+        }
+
+        void Renderer::destroyStaticPipelineObjects() {
+
+            m_device_handle->m_device->destroyDescriptorPool(*m_shader_input_descriptor_pool);
+            m_device_handle->m_device->destroyDescriptorSetLayout(*m_shader_layout);
+
+        }
+
+        void Renderer::destroyDynamicPipelineObjects() {
+
+            for(vk::Framebuffer fbo : (*m_swap_frame_buffers))
+                m_device_handle->m_device->destroyFramebuffer(fbo);
+
+            m_device_handle->m_device->destroyPipelineLayout(*m_layout);
+            m_device_handle->m_device->destroyRenderPass(*m_render_pass);
+            m_device_handle->m_device->destroyPipeline(*m_pipeline);
+
+        }
+
 
 		void Renderer::getTextureAttachments(std::vector<vk::AttachmentDescription>* attachments, std::vector<vk::AttachmentReference>* refs) {
 
@@ -213,6 +239,39 @@ namespace undicht {
 
 		}
 
+        void Renderer::createShaderInputLayout() {
+
+            uint32_t ubo_count = m_ubos.size();
+            uint32_t texture_count = m_textures.size();
+
+            vk::DescriptorSetLayoutBinding uniform_layout_binding;
+            uniform_layout_binding.descriptorCount = 1;
+            uniform_layout_binding.descriptorType = vk::DescriptorType::eUniformBuffer;
+            uniform_layout_binding.stageFlags = vk::ShaderStageFlagBits::eAllGraphics;
+
+            vk::DescriptorSetLayoutBinding sampler_layout_binding;
+            sampler_layout_binding.descriptorCount = 1;
+            sampler_layout_binding.descriptorType = vk::DescriptorType::eCombinedImageSampler;
+            sampler_layout_binding.stageFlags = vk::ShaderStageFlagBits::eFragment;
+            sampler_layout_binding.pImmutableSamplers = nullptr;
+
+            std::vector<vk::DescriptorSetLayoutBinding> bindings;
+
+            for(int i = 0; i < ubo_count; i++) {
+                uniform_layout_binding.binding = i;
+                bindings.push_back(uniform_layout_binding);
+            }
+
+            for(int i = 0; i < texture_count; i++) {
+                sampler_layout_binding.binding = i + ubo_count;
+                bindings.push_back(sampler_layout_binding);
+            }
+
+            vk::DescriptorSetLayoutCreateInfo layout_info({}, bindings);
+            *m_shader_layout = m_device_handle->m_device->createDescriptorSetLayout(layout_info);
+
+        }
+
         void Renderer::createShaderInputDescriptorPool() {
 
             vk::DescriptorPoolSize ubo_pool_size(vk::DescriptorType::eUniformBuffer, m_max_frames_in_flight * m_ubos.size());
@@ -230,6 +289,20 @@ namespace undicht {
                 vk::DescriptorPoolCreateInfo info({}, m_max_frames_in_flight, pool_sizes, nullptr);
                 *m_shader_input_descriptor_pool = m_device_handle->m_device->createDescriptorPool(info);
             }
+
+        }
+
+        void Renderer::createShaderInputDescriptors() {
+
+            if(!(m_ubos.size() || m_textures.size()))
+                return;
+
+            std::vector<vk::DescriptorSetLayout> layouts(m_max_frames_in_flight, *m_shader_layout);
+            vk::DescriptorSetAllocateInfo info(*m_shader_input_descriptor_pool, layouts);
+            info.setDescriptorSetCount(m_max_frames_in_flight);
+
+            // allocate descriptor sets (destroyed when the descriptor pool is destroyed)
+            *m_shader_descriptors = m_device_handle->m_device->allocateDescriptorSets(info);
 
         }
 
@@ -275,8 +348,14 @@ namespace undicht {
 
         void Renderer::updateRenderTarget(SwapChain* swap_chain) {
 
-            cleanUp();
-            linkPipeline();
+            if(m_swap_chain_handle != swap_chain)
+                UND_WARNING << "submitted a new swap chain to renderer: may cause undefined behaviour (not recommended)\n";
+
+            m_device_handle->m_device->waitIdle();
+
+            destroyDynamicPipelineObjects();
+            initDynamicPipelineObjects();
+
         }
 
         //////////////////////////// functions for creating settings objects ////////////////////////////
@@ -316,34 +395,6 @@ namespace undicht {
         vk::PipelineLayoutCreateInfo Renderer::getShaderInputLayout() const {
 
             vk::PipelineLayoutCreateInfo pipeline_layout;
-            uint32_t ubo_count = m_ubos.size();
-            uint32_t texture_count = m_textures.size();
-
-            vk::DescriptorSetLayoutBinding uniform_layout_binding;
-            uniform_layout_binding.descriptorCount = 1;
-            uniform_layout_binding.descriptorType = vk::DescriptorType::eUniformBuffer;
-            uniform_layout_binding.stageFlags = vk::ShaderStageFlagBits::eAllGraphics;
-
-            vk::DescriptorSetLayoutBinding sampler_layout_binding;
-            sampler_layout_binding.descriptorCount = 1;
-            sampler_layout_binding.descriptorType = vk::DescriptorType::eCombinedImageSampler;
-            sampler_layout_binding.stageFlags = vk::ShaderStageFlagBits::eFragment;
-            sampler_layout_binding.pImmutableSamplers = nullptr;
-
-            std::vector<vk::DescriptorSetLayoutBinding> bindings;
-
-            for(int i = 0; i < ubo_count; i++) {
-                uniform_layout_binding.binding = i;
-                bindings.push_back(uniform_layout_binding);
-            }
-
-            for(int i = 0; i < texture_count; i++) {
-                sampler_layout_binding.binding = i + ubo_count;
-                bindings.push_back(sampler_layout_binding);
-            }
-
-            vk::DescriptorSetLayoutCreateInfo layout_info({}, bindings);
-            *m_shader_layout = m_device_handle->m_device->createDescriptorSetLayout(layout_info);
 
             pipeline_layout.pSetLayouts = m_shader_layout;
             pipeline_layout.setLayoutCount = 1;
@@ -360,12 +411,22 @@ namespace undicht {
 
         void Renderer::submit(const UniformBuffer *ubo, uint32_t index) {
 
+            if(m_ubos.size() <= index) {
+                UND_ERROR << "failed to submit ubo: the index was is to big for this renderer\n";
+                return;
+            }
+
             m_ubos.at(index) = ubo;
         }
 
         void Renderer::submit(const Texture* tex, uint32_t index) {
 
-            m_textures.at(index) = tex;
+            if(m_textures.size() <= index - m_ubos.size()) {
+                UND_ERROR << "failed to submit texture: the index was is to big for this renderer\n";
+                return;
+            }
+
+            m_textures.at(index - m_ubos.size()) = tex;
         }
 
 		void Renderer::draw() {
@@ -403,27 +464,12 @@ namespace undicht {
                 cmd->bindVertexBuffers(1, *vbo->m_instance_data.m_buffer, {0});
         }
 
-        void Renderer::bindUniformBuffer(vk::CommandBuffer* cmd, const UniformBuffer* ubo, uint32_t index) {
+        void Renderer::bindDescriptorSets(vk::CommandBuffer* cmd) {
 
-            if(!ubo) {
-                UND_ERROR << "Renderer: Uniform Buffer " << index << " was not submitted\n";
-                return;
-            }
-
-            cmd->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *m_layout, 0, ubo->m_descriptor_sets->at(m_current_frame),
-                                          nullptr);
-
-            UND_LOG << "bound ubo\n";
-        }
-
-        void Renderer::bindTexture(vk::CommandBuffer* cmd, const Texture* tex, uint32_t index) {
-
-            if(!tex) {
-                UND_ERROR << "Renderer: Texture " << index << " was not submitted\n";
-                return;
-            }
+            cmd->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *m_layout, 0, m_shader_descriptors->at(m_current_frame), nullptr);
 
         }
+
 
         void Renderer::recordCommandBuffer(vk::CommandBuffer* cmd_buffer, const VertexBuffer* vbo) {
 
@@ -450,9 +496,7 @@ namespace undicht {
             // draw commands
             cmd_buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *m_pipeline);
             bindVertexBuffer(cmd_buffer, m_vbo);
-            for(int i = 0; i < m_ubos.size(); i++) bindUniformBuffer(cmd_buffer, m_ubos.at(i), i);
-            for(int i = 0; i < m_textures.size(); i++) bindTexture(cmd_buffer, m_textures.at(i), i);
-
+            bindDescriptorSets(cmd_buffer);
 
             if(vbo->usesIndices()) {
                 cmd_buffer->bindIndexBuffer(*m_vbo->m_index_data.m_buffer, 0, vk::IndexType::eUint32);
@@ -486,9 +530,29 @@ namespace undicht {
 
         //////////////////////// creating types that depend on the layout of the render pipeline ////////////////////////
 
-        UniformBuffer Renderer::createUniformBuffer() {
+        UniformBuffer Renderer::createUniformBuffer(uint32_t index) const {
 
-            return UniformBuffer(m_device_handle, m_shader_layout, m_shader_input_descriptor_pool);
+            if(m_ubos.size() > index) {
+
+                return UniformBuffer(m_device_handle, m_shader_descriptors, index);
+            } else { // this uniform index was not requested
+
+                UND_ERROR << "creating Uniform Buffer: index must be smaller then the number of specified uniform buffers\n";
+                return UniformBuffer(m_device_handle, 0, index);
+            }
+
+        }
+
+        Texture Renderer::createTexture(uint32_t index) const {
+            // texture indexes start after the ubo's indexes
+            if(m_textures.size() > index - m_ubos.size()) {
+
+                return Texture(m_device_handle, m_shader_descriptors, index);
+            } else { // this uniform index was not requested
+                UND_ERROR << "creating Texture: index must be smaller then the number of specified textures\n";
+                return Texture(m_device_handle, 0, index);
+            }
+
         }
 
 	} // graphics

@@ -4,21 +4,18 @@ namespace undicht {
 
     namespace graphics {
 
-        UniformBuffer::UniformBuffer(const GraphicsDevice* device, const vk::DescriptorSetLayout* shader_layout, const vk::DescriptorPool* shader_descriptor_pool) {
+        UniformBuffer::UniformBuffer(const GraphicsDevice* device, const std::vector<vk::DescriptorSet>* shader_descriptors, uint32_t index) {
 
             m_device_handle = device;
-            m_descriptor_layout = shader_layout;
-            m_descriptor_pool = shader_descriptor_pool;
+            m_descriptor_sets = shader_descriptors;
 
-            m_descriptor_sets = new std::vector<vk::DescriptorSet>;
+            m_shader_binding = index;
 
         }
 
         UniformBuffer::~UniformBuffer() {
 
             cleanUp();
-
-            delete m_descriptor_sets;
         }
 
         void UniformBuffer::cleanUp() {
@@ -30,14 +27,10 @@ namespace undicht {
         void UniformBuffer::initDescriptorSets(uint32_t count) {
             /// @param count max number of frames in flight
 
-            UND_LOG << "initialized descriptor sets\n";
-
-            std::vector<vk::DescriptorSetLayout> layouts(count, *m_descriptor_layout);
-            vk::DescriptorSetAllocateInfo info(*m_descriptor_pool, layouts);
-            info.setDescriptorSetCount(count);
-
-            // allocate descriptor sets (destroyed when the descriptor pool is destroyed)
-            *m_descriptor_sets = m_device_handle->m_device->allocateDescriptorSets(info);
+            if(!m_descriptor_sets) {
+                UND_ERROR << "The Uniform was created for a renderer that doesnt expect one\n";
+                return;
+            }
 
             // tell the descriptor sets about the buffers
             vk::DescriptorBufferInfo buffer_info;
@@ -45,7 +38,7 @@ namespace undicht {
             buffer_info.range = m_tmp_buffer.size();
 
             vk::WriteDescriptorSet descriptor_write;
-            descriptor_write.dstBinding = 0;
+            descriptor_write.dstBinding = m_shader_binding;
             descriptor_write.pBufferInfo = &buffer_info;
             descriptor_write.dstArrayElement = 0;
             descriptor_write.descriptorType = vk::DescriptorType::eUniformBuffer;
@@ -59,6 +52,7 @@ namespace undicht {
                 descriptor_write.dstSet = m_descriptor_sets->at(i);
 
                 m_device_handle->m_device->updateDescriptorSets(descriptor_write, nullptr);
+
             }
 
         }

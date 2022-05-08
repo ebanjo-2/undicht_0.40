@@ -101,10 +101,6 @@ namespace undicht {
 			Shader createShader() const;
 			Renderer createRenderer() const;
             VertexBuffer createVertexBuffer() const;
-            Texture createTexture() const;
-
-          private:
-
 
         };
 

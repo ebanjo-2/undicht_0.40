@@ -26,6 +26,7 @@ namespace undicht {
             std::vector<vk::VertexInputAttributeDescription>* m_vertex_attributes = 0;
             vk::DescriptorSetLayout* m_shader_layout = 0;
             vk::DescriptorPool* m_shader_input_descriptor_pool = 0;
+            std::vector<vk::DescriptorSet>* m_shader_descriptors = 0;
 			vk::PipelineLayout* m_layout = 0;
 
 			// subpasses
@@ -77,12 +78,22 @@ namespace undicht {
 		private:
             // functions for creating the pipeline
 
-			void getTextureAttachments(std::vector<vk::AttachmentDescription>* attachments, std::vector<vk::AttachmentReference>* refs);
+            // objects that don't depend on the swap chain
+            void initStaticPipelineObjects();
+            void initDynamicPipelineObjects();
+
+            void destroyStaticPipelineObjects();
+            void destroyDynamicPipelineObjects();
+
+
+            void getTextureAttachments(std::vector<vk::AttachmentDescription>* attachments, std::vector<vk::AttachmentReference>* refs);
 
 			void createRenderPass();
 			void createSwapChainFrameBuffers();
 			void createCommandBuffers();
+            void createShaderInputLayout();
             void createShaderInputDescriptorPool();
+            void createShaderInputDescriptors();
 
 		public:
 			// pipeline settings
@@ -117,8 +128,7 @@ namespace undicht {
 		private:
 
             void bindVertexBuffer(vk::CommandBuffer* cmd, const VertexBuffer* vbo);
-            void bindUniformBuffer(vk::CommandBuffer* cmd, const UniformBuffer* ubo, uint32_t index);
-            void bindTexture(vk::CommandBuffer* cmd, const Texture* tex, uint32_t index);
+            void bindDescriptorSets(vk::CommandBuffer* cmd);
 
             void recordCommandBuffer(vk::CommandBuffer* cmd_buffer, const VertexBuffer* vbo);
 			void submitCommandBuffer(vk::CommandBuffer* cmd_buffer, std::vector<vk::Semaphore>* wait_on, vk::Semaphore* render_finished, vk::Fence* render_finished_fence);
@@ -127,7 +137,9 @@ namespace undicht {
             // creating types that depend on the layout of the render pipeline
             // should only be created once the pipeline was linked
 
-            UniformBuffer createUniformBuffer();
+            /// @param index: the index with which the ubo will be addressed in the shader
+            UniformBuffer createUniformBuffer(uint32_t index) const;
+            Texture createTexture(uint32_t index) const; // texture indexes start after the ubo's indexes
 
 		};
 

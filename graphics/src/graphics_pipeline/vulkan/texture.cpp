@@ -4,9 +4,12 @@ namespace undicht {
 
     namespace graphics {
 
-        Texture::Texture(const GraphicsDevice *device) : m_staging_buffer(device) {
+        Texture::Texture(const GraphicsDevice *device, const std::vector<vk::DescriptorSet>* shader_descriptors, uint32_t index) : m_staging_buffer(device) {
 
             m_device_handle = device;
+            m_descriptor_sets = shader_descriptors;
+
+            m_shader_binding = index;
 
             m_sampler = new vk::Sampler;
             m_image = new vk::Image;
@@ -71,6 +74,7 @@ namespace undicht {
 
             initImageView();
             initSampler();
+            initDescriptorSets();
         }
 
         /////////////////////////////  initializing the texture ////////////////////////////////
@@ -113,7 +117,7 @@ namespace undicht {
         void Texture::initSampler() {
 
             vk::SamplerCreateInfo info;
-            info.magFilter = vk::Filter::eLinear;
+            info.magFilter = vk::Filter::eNearest;
             info.minFilter = vk::Filter::eLinear;
             info.addressModeU = vk::SamplerAddressMode::eRepeat;
             info.addressModeV = vk::SamplerAddressMode::eRepeat;
@@ -130,6 +134,35 @@ namespace undicht {
             info.maxLod = 0.0f;
 
             *m_sampler = m_device_handle->m_device->createSampler(info);
+        }
+
+        void Texture::initDescriptorSets() {
+
+            if(!m_descriptor_sets) {
+                UND_ERROR << "The Texture was created for a renderer that doesnt expect one\n";
+                return;
+            }
+
+            vk::DescriptorImageInfo image_info;
+            image_info.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+            image_info.imageView = *m_image_view;
+            image_info.sampler = *m_sampler;
+
+            vk::WriteDescriptorSet descriptor_write;
+            descriptor_write.dstBinding = m_shader_binding;
+            descriptor_write.pImageInfo = &image_info;
+            descriptor_write.dstArrayElement = 0;
+            descriptor_write.descriptorType = vk::DescriptorType::eCombinedImageSampler;
+            descriptor_write.descriptorCount = 1;
+            descriptor_write.pTexelBufferView = nullptr;
+
+            for(int i = 0; i < m_descriptor_sets->size(); i++) {
+
+                descriptor_write.dstSet = m_descriptor_sets->at(i);
+
+                m_device_handle->m_device->updateDescriptorSets(descriptor_write, nullptr);
+            }
+
         }
 
         void Texture::allocate(uint32_t byte_size) {

@@ -18,7 +18,6 @@ namespace undicht {
 
             std::vector<VramBuffer> m_buffers;
             BufferLayout m_buffer_layout;
-            std::vector<vk::DescriptorSet>* m_descriptor_sets = 0;
             std::vector<char> m_tmp_buffer; // temporarily store the data
             std::vector<bool> m_buffers_updated; // true if he buffer of a frame has been updated with the tmp data
             std::vector<uint32_t> m_offsets; // offsets into the buffer for correct alignment
@@ -27,10 +26,10 @@ namespace undicht {
 
             friend Renderer;
             const GraphicsDevice* m_device_handle = 0;
-            const vk::DescriptorSetLayout* m_descriptor_layout = 0; // shader layout of the pipeline this ubo will be used for
-            const vk::DescriptorPool* m_descriptor_pool = 0;
+            const std::vector<vk::DescriptorSet>* m_descriptor_sets = 0;
+            uint32_t m_shader_binding = 0; // the index with which the ubo can be accessed in the shader
 
-            UniformBuffer(const GraphicsDevice* device, const vk::DescriptorSetLayout* shader_layout, const vk::DescriptorPool* shader_descriptor_pool);
+            UniformBuffer(const GraphicsDevice* device, const std::vector<vk::DescriptorSet>* shader_descriptors, uint32_t index);
 
             void cleanUp();
 
