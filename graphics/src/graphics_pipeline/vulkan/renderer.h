@@ -25,7 +25,7 @@ namespace undicht {
             std::vector<vk::VertexInputBindingDescription>* m_vertex_bindings = 0;
             std::vector<vk::VertexInputAttributeDescription>* m_vertex_attributes = 0;
             vk::DescriptorSetLayout* m_shader_layout = 0;
-            bool m_use_uniform_buffer = false;
+            vk::DescriptorPool* m_shader_input_descriptor_pool = 0;
 			vk::PipelineLayout* m_layout = 0;
 
 			// subpasses
@@ -46,7 +46,8 @@ namespace undicht {
 
             // currently submitted objects
             const VertexBuffer* m_vbo = 0;
-            const UniformBuffer* m_ubo = 0;
+            std::vector<const UniformBuffer*> m_ubos;
+            std::vector<const Texture*> m_textures;
 
             uint32_t m_max_frames_in_flight = 1;
             uint32_t m_current_frame = 0;
@@ -81,6 +82,7 @@ namespace undicht {
 			void createRenderPass();
 			void createSwapChainFrameBuffers();
 			void createCommandBuffers();
+            void createShaderInputDescriptorPool();
 
 		public:
 			// pipeline settings
@@ -88,8 +90,8 @@ namespace undicht {
             void setMaxFramesInFlight(uint32_t num);
             void setCurrentFrameID(uint32_t frame);
 
-            void setUniformBufferLayout(const UniformBuffer& ubo_prototype);
 			void setVertexBufferLayout(const VertexBuffer& vbo_prototype);
+            void setShaderInput(uint32_t ubo_count, uint32_t tex_count);
 			void setShader(Shader* shader);
 			void setRenderTarget(SwapChain* swap_chain);
             void updateRenderTarget(SwapChain* swap_chain);
@@ -106,16 +108,26 @@ namespace undicht {
         public:
 			// drawing
 
-            void submit(const VertexBuffer& vbo);
-            void submit(const UniformBuffer& ubo);
-            void submit(const Texture& tex);
+            void submit(const VertexBuffer* vbo);
+            void submit(const UniformBuffer* ubo, uint32_t index);
+            void submit(const Texture* tex, uint32_t index); // the texture index starts after the last ubo index
 
 			void draw();
 
 		private:
 
-            void recordCommandBuffer(vk::CommandBuffer* cmd_buffer, const VertexBuffer* vbo, const UniformBuffer* ubo);
+            void bindVertexBuffer(vk::CommandBuffer* cmd, const VertexBuffer* vbo);
+            void bindUniformBuffer(vk::CommandBuffer* cmd, const UniformBuffer* ubo, uint32_t index);
+            void bindTexture(vk::CommandBuffer* cmd, const Texture* tex, uint32_t index);
+
+            void recordCommandBuffer(vk::CommandBuffer* cmd_buffer, const VertexBuffer* vbo);
 			void submitCommandBuffer(vk::CommandBuffer* cmd_buffer, std::vector<vk::Semaphore>* wait_on, vk::Semaphore* render_finished, vk::Fence* render_finished_fence);
+
+        public:
+            // creating types that depend on the layout of the render pipeline
+            // should only be created once the pipeline was linked
+
+            UniformBuffer createUniformBuffer();
 
 		};
 

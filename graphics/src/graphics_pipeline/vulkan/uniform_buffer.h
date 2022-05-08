@@ -10,7 +10,6 @@ namespace undicht {
 
     namespace graphics {
 
-        class GraphicsDevice;
         class Renderer;
 
         class UniformBuffer {
@@ -19,8 +18,6 @@ namespace undicht {
 
             std::vector<VramBuffer> m_buffers;
             BufferLayout m_buffer_layout;
-            vk::DescriptorSetLayout* m_descriptor_layout = 0;
-            vk::DescriptorPool* m_descriptor_pool = 0;
             std::vector<vk::DescriptorSet>* m_descriptor_sets = 0;
             std::vector<char> m_tmp_buffer; // temporarily store the data
             std::vector<bool> m_buffers_updated; // true if he buffer of a frame has been updated with the tmp data
@@ -28,11 +25,12 @@ namespace undicht {
 
             uint32_t m_max_frames_in_flight = 1;
 
-            friend GraphicsDevice;
             friend Renderer;
             const GraphicsDevice* m_device_handle = 0;
+            const vk::DescriptorSetLayout* m_descriptor_layout = 0; // shader layout of the pipeline this ubo will be used for
+            const vk::DescriptorPool* m_descriptor_pool = 0;
 
-            UniformBuffer(const GraphicsDevice* device);
+            UniformBuffer(const GraphicsDevice* device, const vk::DescriptorSetLayout* shader_layout, const vk::DescriptorPool* shader_descriptor_pool);
 
             void cleanUp();
 
@@ -43,8 +41,6 @@ namespace undicht {
         private:
             // init the buffer
 
-            void initDescriptorLayout();
-            void initDescriptorPool(uint32_t count);
             void initDescriptorSets(uint32_t count);
             void initBuffers(uint32_t count);
 

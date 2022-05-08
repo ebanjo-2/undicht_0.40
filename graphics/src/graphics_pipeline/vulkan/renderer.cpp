@@ -23,6 +23,7 @@ namespace undicht {
             m_vertex_bindings = new std::vector<vk::VertexInputBindingDescription>;
             m_vertex_attributes = new std::vector<vk::VertexInputAttributeDescription>;
             m_shader_layout = new vk::DescriptorSetLayout;
+            m_shader_input_descriptor_pool = new vk::DescriptorPool;
 
 			// creating the command buffers
 			m_cmd_buffer = new std::vector<vk::CommandBuffer>;
@@ -43,6 +44,7 @@ namespace undicht {
             delete m_vertex_bindings;
             delete m_vertex_attributes;
             delete m_shader_layout;
+            delete m_shader_input_descriptor_pool;
 
             // actual pipeline objects
             delete m_swap_frame_buffers;
@@ -62,6 +64,9 @@ namespace undicht {
             for(vk::Framebuffer fbo : (*m_swap_frame_buffers))
                 m_device_handle->m_device->destroyFramebuffer(fbo);
 
+            m_device_handle->m_device->destroyDescriptorPool(*m_shader_input_descriptor_pool);
+            m_device_handle->m_device->destroyDescriptorSetLayout(*m_shader_layout);
+
             m_device_handle->m_device->destroyPipelineLayout(*m_layout);
             m_device_handle->m_device->destroyRenderPass(*m_render_pass);
             m_device_handle->m_device->destroyPipeline(*m_pipeline);
@@ -80,6 +85,7 @@ namespace undicht {
 			createRenderPass();
 			createSwapChainFrameBuffers();
 			createCommandBuffers();
+            createShaderInputDescriptorPool();
 
 			// info about the fixed pipeline stages
 			vk::PipelineVertexInputStateCreateInfo vertex_input = getVertexInputState();
@@ -207,6 +213,26 @@ namespace undicht {
 
 		}
 
+        void Renderer::createShaderInputDescriptorPool() {
+
+            vk::DescriptorPoolSize ubo_pool_size(vk::DescriptorType::eUniformBuffer, m_max_frames_in_flight * m_ubos.size());
+            vk::DescriptorPoolSize tex_pool_size(vk::DescriptorType::eCombinedImageSampler, m_max_frames_in_flight * m_textures.size());
+
+            std::vector<vk::DescriptorPoolSize> pool_sizes;
+
+            if(m_ubos.size())
+                pool_sizes.push_back(ubo_pool_size);
+
+            if(m_textures.size())
+                pool_sizes.push_back(tex_pool_size);
+
+            if(pool_sizes.size()) {
+                vk::DescriptorPoolCreateInfo info({}, m_max_frames_in_flight, pool_sizes, nullptr);
+                *m_shader_input_descriptor_pool = m_device_handle->m_device->createDescriptorPool(info);
+            }
+
+        }
+
 		//////////////////////////////// pipeline settings /////////////////////////////////////
 
         void Renderer::setMaxFramesInFlight(uint32_t num) {
@@ -220,11 +246,6 @@ namespace undicht {
         }
 
 
-        void Renderer::setUniformBufferLayout(const UniformBuffer& ubo_prototype) {
-
-            m_use_uniform_buffer = true;
-        }
-
 		void Renderer::setVertexBufferLayout(const VertexBuffer& vbo_prototype) {
 
             m_vertex_bindings->push_back(*vbo_prototype.m_per_vertex_input);
@@ -235,6 +256,12 @@ namespace undicht {
             *m_vertex_attributes = vbo_prototype.getAttributeDescriptions();
 
 		}
+
+        void Renderer::setShaderInput(uint32_t ubo_count, uint32_t tex_count) {
+
+            m_ubos.resize(ubo_count);
+            m_textures.resize(tex_count);
+        }
 
 		void Renderer::setShader(Shader* shader) {
 			
@@ -289,23 +316,31 @@ namespace undicht {
         vk::PipelineLayoutCreateInfo Renderer::getShaderInputLayout() const {
 
             vk::PipelineLayoutCreateInfo pipeline_layout;
+            uint32_t ubo_count = m_ubos.size();
+            uint32_t texture_count = m_textures.size();
 
             vk::DescriptorSetLayoutBinding uniform_layout_binding;
-            uniform_layout_binding.descriptorType = vk::DescriptorType::eUniformBuffer;
             uniform_layout_binding.descriptorCount = 1;
+            uniform_layout_binding.descriptorType = vk::DescriptorType::eUniformBuffer;
             uniform_layout_binding.stageFlags = vk::ShaderStageFlagBits::eAllGraphics;
-            uniform_layout_binding.binding = 0;
 
             vk::DescriptorSetLayoutBinding sampler_layout_binding;
-            sampler_layout_binding.binding = 1;
             sampler_layout_binding.descriptorCount = 1;
             sampler_layout_binding.descriptorType = vk::DescriptorType::eCombinedImageSampler;
-            sampler_layout_binding.pImmutableSamplers = nullptr;
             sampler_layout_binding.stageFlags = vk::ShaderStageFlagBits::eFragment;
+            sampler_layout_binding.pImmutableSamplers = nullptr;
 
-            /** TODO */
+            std::vector<vk::DescriptorSetLayoutBinding> bindings;
 
-            std::vector<vk::DescriptorSetLayoutBinding> bindings = {uniform_layout_binding, sampler_layout_binding};
+            for(int i = 0; i < ubo_count; i++) {
+                uniform_layout_binding.binding = i;
+                bindings.push_back(uniform_layout_binding);
+            }
+
+            for(int i = 0; i < texture_count; i++) {
+                sampler_layout_binding.binding = i + ubo_count;
+                bindings.push_back(sampler_layout_binding);
+            }
 
             vk::DescriptorSetLayoutCreateInfo layout_info({}, bindings);
             *m_shader_layout = m_device_handle->m_device->createDescriptorSetLayout(layout_info);
@@ -318,21 +353,19 @@ namespace undicht {
 
 		/////////////////////////////////////// drawing /////////////////////////////////////
 
-        void Renderer::submit(const UniformBuffer &ubo) {
+        void Renderer::submit(const VertexBuffer *vbo) {
 
-            m_ubo = &ubo;
-            m_use_uniform_buffer = true;
-
+            m_vbo = vbo;
         }
 
-        void Renderer::submit(const VertexBuffer &vbo) {
+        void Renderer::submit(const UniformBuffer *ubo, uint32_t index) {
 
-            m_vbo = &vbo;
+            m_ubos.at(index) = ubo;
         }
 
-        void Renderer::submit(const Texture& tex) {
+        void Renderer::submit(const Texture* tex, uint32_t index) {
 
-
+            m_textures.at(index) = tex;
         }
 
 		void Renderer::draw() {
@@ -352,7 +385,7 @@ namespace undicht {
             std::vector<vk::Semaphore> wait_on({*image_ready});
 
             // record the command buffer
-            recordCommandBuffer(cmd, m_vbo, m_ubo);
+            recordCommandBuffer(cmd, m_vbo);
 
 			// submit the command buffer
 			submitCommandBuffer(cmd, &wait_on, render_finished, render_finished_fence);
@@ -360,7 +393,39 @@ namespace undicht {
 
 		/////////////////////////////////////// private draw functions ////////////////////////////
 
-        void Renderer::recordCommandBuffer(vk::CommandBuffer* cmd_buffer, const VertexBuffer* vbo, const UniformBuffer* ubo) {
+        void Renderer::bindVertexBuffer(vk::CommandBuffer* cmd, const VertexBuffer* vbo) {
+
+            // binding the per vertex data
+            cmd->bindVertexBuffers(0, *vbo->m_vertex_data.m_buffer, {0});
+
+            // binding the per instance data
+            if(vbo->usesInstancing())
+                cmd->bindVertexBuffers(1, *vbo->m_instance_data.m_buffer, {0});
+        }
+
+        void Renderer::bindUniformBuffer(vk::CommandBuffer* cmd, const UniformBuffer* ubo, uint32_t index) {
+
+            if(!ubo) {
+                UND_ERROR << "Renderer: Uniform Buffer " << index << " was not submitted\n";
+                return;
+            }
+
+            cmd->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *m_layout, 0, ubo->m_descriptor_sets->at(m_current_frame),
+                                          nullptr);
+
+            UND_LOG << "bound ubo\n";
+        }
+
+        void Renderer::bindTexture(vk::CommandBuffer* cmd, const Texture* tex, uint32_t index) {
+
+            if(!tex) {
+                UND_ERROR << "Renderer: Texture " << index << " was not submitted\n";
+                return;
+            }
+
+        }
+
+        void Renderer::recordCommandBuffer(vk::CommandBuffer* cmd_buffer, const VertexBuffer* vbo) {
 
             // getting the framebuffer that gets drawn to
             int image_index = m_swap_chain_handle->getCurrentImageID();
@@ -384,10 +449,10 @@ namespace undicht {
 
             // draw commands
             cmd_buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *m_pipeline);
-            cmd_buffer->bindVertexBuffers(0, *vbo->m_vertex_data.m_buffer, {0});
-            if(vbo->usesInstancing())cmd_buffer->bindVertexBuffers(1, *vbo->m_instance_data.m_buffer, {0});
-            if(ubo) cmd_buffer->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *m_layout, 0, ubo->m_descriptor_sets->at(m_current_frame),
-                                                   nullptr);
+            bindVertexBuffer(cmd_buffer, m_vbo);
+            for(int i = 0; i < m_ubos.size(); i++) bindUniformBuffer(cmd_buffer, m_ubos.at(i), i);
+            for(int i = 0; i < m_textures.size(); i++) bindTexture(cmd_buffer, m_textures.at(i), i);
+
 
             if(vbo->usesIndices()) {
                 cmd_buffer->bindIndexBuffer(*m_vbo->m_index_data.m_buffer, 0, vk::IndexType::eUint32);
@@ -418,6 +483,13 @@ namespace undicht {
 			m_device_handle->m_graphics_queue->submit(1, &submit_info, *render_finished_fence);
 
 		}
+
+        //////////////////////// creating types that depend on the layout of the render pipeline ////////////////////////
+
+        UniformBuffer Renderer::createUniformBuffer() {
+
+            return UniformBuffer(m_device_handle, m_shader_layout, m_shader_input_descriptor_pool);
+        }
 
 	} // graphics
 

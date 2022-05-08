@@ -48,20 +48,20 @@ int main() {
     vbo.setInstanceData({0.0f, 0.0f}, 0);
     vbo.setInstanceData({0.5f, 0.6f}, 2 * sizeof(float));
 
-    UniformBuffer uniforms = gpu.createUniformBuffer();
+	Renderer renderer = gpu.createRenderer();
+    renderer.setMaxFramesInFlight(MAX_FRAMES_IN_FLIGHT);
+    renderer.setVertexBufferLayout(vbo);
+	renderer.setShader(&shader);
+    renderer.setShaderInput(1, 0);
+	renderer.setRenderTarget(&swap_chain);
+	renderer.linkPipeline();
+
+    UniformBuffer uniforms = renderer.createUniformBuffer();
     uniforms.setMaxFramesInFlight(MAX_FRAMES_IN_FLIGHT); // has an internal buffer for every frame
     uniforms.setAttribute(0, UND_FLOAT32); // time
     uniforms.setAttribute(1, UND_VEC2F); // var
     uniforms.setAttribute(2, UND_VEC4F); // color
     uniforms.finalizeLayout();
-
-	Renderer renderer = gpu.createRenderer();
-    renderer.setMaxFramesInFlight(MAX_FRAMES_IN_FLIGHT);
-    renderer.setUniformBufferLayout(uniforms);
-    renderer.setVertexBufferLayout(vbo);
-	renderer.setShader(&shader);
-	renderer.setRenderTarget(&swap_chain);
-	renderer.linkPipeline();
 
     Texture texture = gpu.createTexture();
     tools::ImageFile(PROJECT_DIR + "res/Tux.jpg", texture);
@@ -80,8 +80,8 @@ int main() {
         uniforms.setData(2, pos.data(), pos.size() * sizeof(float));
 
 		// draw
-        renderer.submit(uniforms);
-        renderer.submit(vbo);
+        renderer.submit(&vbo);
+        renderer.submit(&uniforms, 0);
         renderer.draw();
 
 		// present

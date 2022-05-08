@@ -4,15 +4,13 @@ namespace undicht {
 
     namespace graphics {
 
-        UniformBuffer::UniformBuffer(const GraphicsDevice* device) {
+        UniformBuffer::UniformBuffer(const GraphicsDevice* device, const vk::DescriptorSetLayout* shader_layout, const vk::DescriptorPool* shader_descriptor_pool) {
 
             m_device_handle = device;
+            m_descriptor_layout = shader_layout;
+            m_descriptor_pool = shader_descriptor_pool;
 
-            m_descriptor_layout = new vk::DescriptorSetLayout;
-            m_descriptor_pool = new vk::DescriptorPool;
             m_descriptor_sets = new std::vector<vk::DescriptorSet>;
-
-            initDescriptorLayout();
 
         }
 
@@ -20,42 +18,19 @@ namespace undicht {
 
             cleanUp();
 
-            delete m_descriptor_layout;
-            delete m_descriptor_pool;
             delete m_descriptor_sets;
         }
 
         void UniformBuffer::cleanUp() {
 
-            m_device_handle->m_device->destroyDescriptorSetLayout(*m_descriptor_layout);
-            m_device_handle->m_device->destroyDescriptorPool(*m_descriptor_pool);
         }
 
         //////////////////////////////////////// init the buffer /////////////////////////////////////
 
-        void UniformBuffer::initDescriptorLayout() {
-
-            vk::DescriptorSetLayoutBinding layout_binding;
-            layout_binding.descriptorType = vk::DescriptorType::eUniformBuffer;
-            layout_binding.descriptorCount = 1;
-            layout_binding.stageFlags = vk::ShaderStageFlagBits::eAllGraphics;
-            layout_binding.binding = 0;
-
-            vk::DescriptorSetLayoutCreateInfo layout_info({}, layout_binding);
-            *m_descriptor_layout = m_device_handle->m_device->createDescriptorSetLayout(layout_info);
-        }
-
-        void UniformBuffer::initDescriptorPool(uint32_t count) {
-            /// @param count max number of frames in flight
-
-            vk::DescriptorPoolSize pool_size(vk::DescriptorType::eUniformBuffer, count);
-            vk::DescriptorPoolCreateInfo info({}, count, pool_size, nullptr);
-            *m_descriptor_pool = m_device_handle->m_device->createDescriptorPool(info);
-
-        }
-
         void UniformBuffer::initDescriptorSets(uint32_t count) {
             /// @param count max number of frames in flight
+
+            UND_LOG << "initialized descriptor sets\n";
 
             std::vector<vk::DescriptorSetLayout> layouts(count, *m_descriptor_layout);
             vk::DescriptorSetAllocateInfo info(*m_descriptor_pool, layouts);
@@ -197,7 +172,6 @@ namespace undicht {
             // and before storing any data in the buffer
 
             initBuffers(m_max_frames_in_flight);
-            initDescriptorPool(m_max_frames_in_flight);
             initDescriptorSets(m_max_frames_in_flight);
             m_buffers_updated.resize(m_max_frames_in_flight);
         }
@@ -207,7 +181,6 @@ namespace undicht {
         void UniformBuffer::setData(uint32_t index, const void* data, uint32_t byte_size) {
             // storing the data in the tmp buffer
 
-            int offset = m_offsets.at(index);
             std::copy((const char*)data, (const char*)data + byte_size, m_tmp_buffer.begin() + m_offsets.at(index));
 
             std::fill(m_buffers_updated.begin(), m_buffers_updated.end(), false);
