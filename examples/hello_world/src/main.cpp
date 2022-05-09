@@ -11,7 +11,7 @@ using namespace graphics;
 
 // root dir of the hello world example
 const std::string PROJECT_DIR = std::string(__FILE__).substr(0, std::string(__FILE__).rfind('/')) + "/../";
-const int MAX_FRAMES_IN_FLIGHT = 2;
+const int MAX_FRAMES_IN_FLIGHT = 10;
 
 int main() {
 
@@ -56,22 +56,24 @@ int main() {
 	renderer.setRenderTarget(&swap_chain);
 	renderer.linkPipeline();
 
-    UniformBuffer uniforms = renderer.createUniformBuffer(0);
+    UniformBuffer uniforms = gpu.createUniformBuffer();
     uniforms.setMaxFramesInFlight(MAX_FRAMES_IN_FLIGHT); // has an internal buffer for every frame
     uniforms.setAttribute(0, UND_FLOAT32); // time
     uniforms.setAttribute(1, UND_VEC2F); // var
     uniforms.setAttribute(2, UND_VEC4F); // color
     uniforms.finalizeLayout();
 
-    Texture texture = renderer.createTexture(1);
+    Texture texture = gpu.createTexture();
+    Texture texture2 = gpu.createTexture();
     tools::ImageFile(PROJECT_DIR + "res/Tux.jpg", texture);
+    tools::ImageFile(PROJECT_DIR + "res/default_wood.png", texture2);
 
     while(!window.shouldClose()) {
 
 		// begin new frame
 		uint32_t current_frame = swap_chain.beginFrame();
         renderer.setCurrentFrameID(current_frame);
-        uniforms.setCurrentFrame(current_frame); // updating the buffer for the current frame
+
 
         // updating the uniform buffer
         std::array<float, 4> pos = {0.2f, 0.0f, 0.3f, 0.0f};
@@ -82,7 +84,12 @@ int main() {
 		// draw
         renderer.submit(&vbo);
         renderer.submit(&uniforms, 0);
-        renderer.submit(&texture, 1);
+
+        if(swap_chain.getCurrentFrameID())
+            renderer.submit(&texture, 1);
+        else
+            renderer.submit(&texture2, 1);
+
         renderer.draw();
 
 		// present

@@ -10,6 +10,7 @@ namespace undicht {
 
     namespace graphics {
 
+        class GraphicsDevice;
         class Renderer;
 
         class UniformBuffer {
@@ -25,11 +26,11 @@ namespace undicht {
             uint32_t m_max_frames_in_flight = 1;
 
             friend Renderer;
+            friend GraphicsDevice;
             const GraphicsDevice* m_device_handle = 0;
-            const std::vector<vk::DescriptorSet>* m_descriptor_sets = 0;
-            uint32_t m_shader_binding = 0; // the index with which the ubo can be accessed in the shader
 
-            UniformBuffer(const GraphicsDevice* device, const std::vector<vk::DescriptorSet>* shader_descriptors, uint32_t index);
+
+            UniformBuffer(const GraphicsDevice* device);
 
             void cleanUp();
 
@@ -40,16 +41,15 @@ namespace undicht {
         private:
             // init the buffer
 
-            void initDescriptorSets(uint32_t count);
             void initBuffers(uint32_t count);
-
             void initMemoryOffsets();
+
+            void writeDescriptorSets(const std::vector<vk::DescriptorSet>* shader_descriptors, uint32_t index, uint32_t frame_id) const;
 
         public:
             // using more than one frame in flight
 
             void setMaxFramesInFlight(uint32_t count);
-            void setCurrentFrame(uint32_t current_frame);
 
         public:
             // specifying the memory layout (should not be changed once the buffer has been submitted to a renderer)
@@ -65,6 +65,7 @@ namespace undicht {
             // setting data
 
             void setData(uint32_t index, const void* data, uint32_t byte_size);
+            void updateBuffer(uint32_t current_frame);
 
         };
 

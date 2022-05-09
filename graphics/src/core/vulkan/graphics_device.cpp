@@ -194,6 +194,17 @@ namespace undicht {
             return VertexBuffer(this);
         }
 
+        UniformBuffer GraphicsDevice::createUniformBuffer() const {
+
+
+            return UniformBuffer(this);
+        }
+
+        Texture GraphicsDevice::createTexture() const {
+
+            return Texture(this);
+        }
+
     }
 
 } // namespace undicht

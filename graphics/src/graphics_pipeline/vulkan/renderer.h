@@ -52,6 +52,8 @@ namespace undicht {
 
             uint32_t m_max_frames_in_flight = 1;
             uint32_t m_current_frame = 0;
+            std::vector<std::vector<bool>> m_text_updated_for_frame;
+            std::vector<std::vector<bool>> m_ubos_updated_for_frame; // ubo_index -> frame_index
 
 			const GraphicsDevice* m_device_handle = 0;
 			const Shader* m_shader_handle = 0;
@@ -120,7 +122,7 @@ namespace undicht {
 			// drawing
 
             void submit(const VertexBuffer* vbo);
-            void submit(const UniformBuffer* ubo, uint32_t index);
+            void submit(UniformBuffer* ubo, uint32_t index);
             void submit(const Texture* tex, uint32_t index); // the texture index starts after the last ubo index
 
 			void draw();
@@ -132,14 +134,6 @@ namespace undicht {
 
             void recordCommandBuffer(vk::CommandBuffer* cmd_buffer, const VertexBuffer* vbo);
 			void submitCommandBuffer(vk::CommandBuffer* cmd_buffer, std::vector<vk::Semaphore>* wait_on, vk::Semaphore* render_finished, vk::Fence* render_finished_fence);
-
-        public:
-            // creating types that depend on the layout of the render pipeline
-            // should only be created once the pipeline was linked
-
-            /// @param index: the index with which the ubo will be addressed in the shader
-            UniformBuffer createUniformBuffer(uint32_t index) const;
-            Texture createTexture(uint32_t index) const; // texture indexes start after the ubo's indexes
 
 		};
 

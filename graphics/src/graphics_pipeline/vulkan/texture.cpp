@@ -4,12 +4,9 @@ namespace undicht {
 
     namespace graphics {
 
-        Texture::Texture(const GraphicsDevice *device, const std::vector<vk::DescriptorSet>* shader_descriptors, uint32_t index) : m_staging_buffer(device) {
+        Texture::Texture(const GraphicsDevice *device) : m_staging_buffer(device) {
 
             m_device_handle = device;
-            m_descriptor_sets = shader_descriptors;
-
-            m_shader_binding = index;
 
             m_sampler = new vk::Sampler;
             m_image = new vk::Image;
@@ -74,7 +71,6 @@ namespace undicht {
 
             initImageView();
             initSampler();
-            initDescriptorSets();
         }
 
         /////////////////////////////  initializing the texture ////////////////////////////////
@@ -136,12 +132,7 @@ namespace undicht {
             *m_sampler = m_device_handle->m_device->createSampler(info);
         }
 
-        void Texture::initDescriptorSets() {
-
-            if(!m_descriptor_sets) {
-                UND_ERROR << "The Texture was created for a renderer that doesnt expect one\n";
-                return;
-            }
+        void Texture::writeDescriptorSets(const std::vector<vk::DescriptorSet>* shader_descriptors, uint32_t index, uint32_t frame_id) const {
 
             vk::DescriptorImageInfo image_info;
             image_info.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
@@ -149,19 +140,15 @@ namespace undicht {
             image_info.sampler = *m_sampler;
 
             vk::WriteDescriptorSet descriptor_write;
-            descriptor_write.dstBinding = m_shader_binding;
+            descriptor_write.dstBinding = index;
             descriptor_write.pImageInfo = &image_info;
             descriptor_write.dstArrayElement = 0;
             descriptor_write.descriptorType = vk::DescriptorType::eCombinedImageSampler;
             descriptor_write.descriptorCount = 1;
             descriptor_write.pTexelBufferView = nullptr;
+            descriptor_write.dstSet = shader_descriptors->at(frame_id);
 
-            for(int i = 0; i < m_descriptor_sets->size(); i++) {
-
-                descriptor_write.dstSet = m_descriptor_sets->at(i);
-
-                m_device_handle->m_device->updateDescriptorSets(descriptor_write, nullptr);
-            }
+            m_device_handle->m_device->updateDescriptorSets(descriptor_write, nullptr);
 
         }
 

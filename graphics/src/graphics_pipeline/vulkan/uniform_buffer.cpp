@@ -4,12 +4,9 @@ namespace undicht {
 
     namespace graphics {
 
-        UniformBuffer::UniformBuffer(const GraphicsDevice* device, const std::vector<vk::DescriptorSet>* shader_descriptors, uint32_t index) {
+        UniformBuffer::UniformBuffer(const GraphicsDevice* device) {
 
             m_device_handle = device;
-            m_descriptor_sets = shader_descriptors;
-
-            m_shader_binding = index;
 
         }
 
@@ -23,39 +20,6 @@ namespace undicht {
         }
 
         //////////////////////////////////////// init the buffer /////////////////////////////////////
-
-        void UniformBuffer::initDescriptorSets(uint32_t count) {
-            /// @param count max number of frames in flight
-
-            if(!m_descriptor_sets) {
-                UND_ERROR << "The Uniform was created for a renderer that doesnt expect one\n";
-                return;
-            }
-
-            // tell the descriptor sets about the buffers
-            vk::DescriptorBufferInfo buffer_info;
-            buffer_info.offset = 0;
-            buffer_info.range = m_tmp_buffer.size();
-
-            vk::WriteDescriptorSet descriptor_write;
-            descriptor_write.dstBinding = m_shader_binding;
-            descriptor_write.pBufferInfo = &buffer_info;
-            descriptor_write.dstArrayElement = 0;
-            descriptor_write.descriptorType = vk::DescriptorType::eUniformBuffer;
-            descriptor_write.descriptorCount = 1;
-            descriptor_write.pImageInfo = nullptr;
-            descriptor_write.pTexelBufferView = nullptr;
-
-            for(int i = 0; i < count; i++) {
-
-                buffer_info.buffer = *m_buffers.at(i).m_buffer;
-                descriptor_write.dstSet = m_descriptor_sets->at(i);
-
-                m_device_handle->m_device->updateDescriptorSets(descriptor_write, nullptr);
-
-            }
-
-        }
 
         void UniformBuffer::initBuffers(uint32_t count) {
 
@@ -122,6 +86,29 @@ namespace undicht {
 
         }
 
+        void UniformBuffer::writeDescriptorSets(const std::vector<vk::DescriptorSet>* shader_descriptors, uint32_t index, uint32_t frame_id) const {
+            /// @param count max number of frames in flight
+
+            // tell the descriptor sets about the buffers
+            vk::DescriptorBufferInfo buffer_info;
+            buffer_info.offset = 0;
+            buffer_info.range = m_tmp_buffer.size();
+            buffer_info.buffer = *m_buffers.at(frame_id).m_buffer;
+
+            vk::WriteDescriptorSet descriptor_write;
+            descriptor_write.dstBinding = index;
+            descriptor_write.pBufferInfo = &buffer_info;
+            descriptor_write.dstArrayElement = 0;
+            descriptor_write.descriptorType = vk::DescriptorType::eUniformBuffer;
+            descriptor_write.descriptorCount = 1;
+            descriptor_write.pImageInfo = nullptr;
+            descriptor_write.pTexelBufferView = nullptr;
+            descriptor_write.dstSet = shader_descriptors->at(frame_id);
+
+            m_device_handle->m_device->updateDescriptorSets(descriptor_write, nullptr);
+
+        }
+
         //////////////////////////////////// using more than one frame in flight //////////////////////////////////
 
         void UniformBuffer::setMaxFramesInFlight(uint32_t count) {
@@ -130,17 +117,6 @@ namespace undicht {
             // so there is an internal buffer for each frame
 
             m_max_frames_in_flight = count;
-
-        }
-
-        void UniformBuffer::setCurrentFrame(uint32_t current_frame) {
-
-            // updating the buffer belonging to the current frame
-            if(!m_buffers_updated.at(current_frame)) {
-
-                m_buffers.at(current_frame).setData(m_tmp_buffer.data(), m_tmp_buffer.size(), 0);
-                m_buffers_updated.at(current_frame) = true;
-            }
 
         }
 
@@ -166,7 +142,6 @@ namespace undicht {
             // and before storing any data in the buffer
 
             initBuffers(m_max_frames_in_flight);
-            initDescriptorSets(m_max_frames_in_flight);
             m_buffers_updated.resize(m_max_frames_in_flight);
         }
 
@@ -178,6 +153,17 @@ namespace undicht {
             std::copy((const char*)data, (const char*)data + byte_size, m_tmp_buffer.begin() + m_offsets.at(index));
 
             std::fill(m_buffers_updated.begin(), m_buffers_updated.end(), false);
+        }
+
+        void UniformBuffer::updateBuffer(uint32_t current_frame) {
+
+            // updating the buffer belonging to the current frame
+            if(!m_buffers_updated.at(current_frame)) {
+
+                m_buffers.at(current_frame).setData(m_tmp_buffer.data(), m_tmp_buffer.size(), 0);
+                m_buffers_updated.at(current_frame) = true;
+            }
+
         }
 
     } // graphics

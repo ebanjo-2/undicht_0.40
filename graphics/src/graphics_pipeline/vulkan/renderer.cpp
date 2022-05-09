@@ -311,6 +311,13 @@ namespace undicht {
         void Renderer::setMaxFramesInFlight(uint32_t num) {
 
             m_max_frames_in_flight = num;
+
+            for(std::vector<bool> v : m_ubos_updated_for_frame)
+                v.resize(num);
+
+            for(std::vector<bool> v : m_text_updated_for_frame)
+                v.resize(num);
+
         }
 
         void Renderer::setCurrentFrameID(uint32_t frame) {
@@ -334,6 +341,9 @@ namespace undicht {
 
             m_ubos.resize(ubo_count);
             m_textures.resize(tex_count);
+
+            m_ubos_updated_for_frame.resize(ubo_count, std::vector<bool>(m_max_frames_in_flight));
+            m_text_updated_for_frame.resize(tex_count, std::vector<bool>(m_max_frames_in_flight));
         }
 
 		void Renderer::setShader(Shader* shader) {
@@ -409,24 +419,50 @@ namespace undicht {
             m_vbo = vbo;
         }
 
-        void Renderer::submit(const UniformBuffer *ubo, uint32_t index) {
+        void Renderer::submit(UniformBuffer *ubo, uint32_t index) {
 
             if(m_ubos.size() <= index) {
                 UND_ERROR << "failed to submit ubo: the index was is to big for this renderer\n";
                 return;
             }
 
-            m_ubos.at(index) = ubo;
+            if(m_ubos.at(index) != ubo) {
+
+                std::fill(m_ubos_updated_for_frame.at(index).begin(), m_ubos_updated_for_frame.at(index).end(), false);
+                m_ubos.at(index) = ubo;
+            }
+
+            if(!m_ubos_updated_for_frame.at(index).at(m_current_frame)) {
+
+                ubo->writeDescriptorSets(m_shader_descriptors, index, m_current_frame);
+                m_ubos_updated_for_frame.at(index).at(m_current_frame) = true;
+            }
+
+            ubo->updateBuffer(m_current_frame);
+
         }
 
         void Renderer::submit(const Texture* tex, uint32_t index) {
 
-            if(m_textures.size() <= index - m_ubos.size()) {
+            index -= m_ubos.size();
+
+            if(m_textures.size() <= index) {
                 UND_ERROR << "failed to submit texture: the index was is to big for this renderer\n";
                 return;
             }
 
-            m_textures.at(index - m_ubos.size()) = tex;
+            if(m_textures.at(index) != tex) {
+
+                std::fill(m_text_updated_for_frame.at(index).begin(), m_text_updated_for_frame.at(index).end(), false);
+                m_textures.at(index) = tex;
+            }
+
+            if(!m_text_updated_for_frame.at(index).at(m_current_frame)) {
+
+                tex->writeDescriptorSets(m_shader_descriptors, index + m_ubos.size(), m_current_frame);
+                m_text_updated_for_frame.at(index).at(m_current_frame) = true;
+            }
+
         }
 
 		void Renderer::draw() {
@@ -528,32 +564,6 @@ namespace undicht {
 
 		}
 
-        //////////////////////// creating types that depend on the layout of the render pipeline ////////////////////////
-
-        UniformBuffer Renderer::createUniformBuffer(uint32_t index) const {
-
-            if(m_ubos.size() > index) {
-
-                return UniformBuffer(m_device_handle, m_shader_descriptors, index);
-            } else { // this uniform index was not requested
-
-                UND_ERROR << "creating Uniform Buffer: index must be smaller then the number of specified uniform buffers\n";
-                return UniformBuffer(m_device_handle, 0, index);
-            }
-
-        }
-
-        Texture Renderer::createTexture(uint32_t index) const {
-            // texture indexes start after the ubo's indexes
-            if(m_textures.size() > index - m_ubos.size()) {
-
-                return Texture(m_device_handle, m_shader_descriptors, index);
-            } else { // this uniform index was not requested
-                UND_ERROR << "creating Texture: index must be smaller then the number of specified textures\n";
-                return Texture(m_device_handle, 0, index);
-            }
-
-        }
 
 	} // graphics
 

@@ -32,10 +32,8 @@ namespace undicht {
             friend GraphicsDevice;
             friend Renderer;
             const GraphicsDevice* m_device_handle = 0;
-            const std::vector<vk::DescriptorSet>* m_descriptor_sets = 0;
-            uint32_t m_shader_binding = 0; // the index with which the ubo can be accessed in the shader
 
-            Texture(const GraphicsDevice* device, const std::vector<vk::DescriptorSet>* shader_descriptors, uint32_t index);
+            Texture(const GraphicsDevice* device);
 
             void cleanUp();
 
@@ -57,7 +55,8 @@ namespace undicht {
             void initImageView();
             void initSampler();
 
-            void initDescriptorSets();
+            // tells the descriptors that this texture will be accessed in the shader under the index
+            void writeDescriptorSets(const std::vector<vk::DescriptorSet>* shader_descriptors, uint32_t index, uint32_t frame_id) const;
 
             void allocate(uint32_t byte_size);
 
