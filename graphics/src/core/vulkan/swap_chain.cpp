@@ -14,7 +14,7 @@ namespace undicht {
 
 	namespace graphics {
 
-		SwapChain::SwapChain(GraphicsDevice* device, vk::SurfaceKHR* surface) {
+		SwapChain::SwapChain(GraphicsDevice* device, GraphicsSurface* surface) {
 
             m_physical_device_handle = device->m_physical_device;
 			m_device_handle = device->m_device;
@@ -22,7 +22,7 @@ namespace undicht {
 			m_surface_handle = surface;
 
             // checking device capabilities
-            if(!checkDeviceCapabilities(device->m_physical_device, surface)) {
+            if(!checkDeviceCapabilities(device->m_physical_device, surface->m_surface)) {
                 UND_ERROR << "failed to  create swap chain: device does not support any formats or present modes\n";
                 return;
             }
@@ -47,7 +47,13 @@ namespace undicht {
 			m_image_views = new std::vector<vk::ImageView>;
 			m_swap_chain = new vk::SwapchainKHR;
 
-		}
+            // determining the size of the swap chain images
+            setExtent(surface->m_width, surface->m_height);
+
+            // determining the queues that are going to access the swap chain
+            m_queue_ids = std::vector<uint32_t>(device->m_unique_queue_family_ids.begin(), device->m_unique_queue_family_ids.end());
+
+        }
 
 		SwapChain::~SwapChain() {
 
@@ -210,7 +216,7 @@ namespace undicht {
 				sharing = vk::SharingMode::eConcurrent;
 
             // creating the swap chain
-			vk::SwapchainCreateInfoKHR info({}, *m_surface_handle, m_image_count);
+			vk::SwapchainCreateInfoKHR info({}, *m_surface_handle->m_surface, m_image_count);
             info.setImageFormat(m_format->format);
             info.setImageColorSpace(m_format->colorSpace);
             info.setImageExtent(*m_extent);
@@ -251,10 +257,10 @@ namespace undicht {
 
         void SwapChain::matchSurfaceExtent(const GraphicsSurface& surface) {
 
-            m_surface_handle = surface.m_surface;
+            m_surface_handle = &surface;
 
             // update the surface capabilities
-            getSupportDetails(m_physical_device_handle, m_surface_handle);
+            getSupportDetails(m_physical_device_handle, m_surface_handle->m_surface);
 
             // set the extent
             setExtent(surface.m_width, surface.m_height);

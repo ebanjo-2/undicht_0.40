@@ -189,16 +189,8 @@ namespace undicht {
 		////////////////////////////////// creating a swap chain //////////////////////////////
 		
 		SwapChain GraphicsAPI::createSwapChain(GraphicsDevice& device, GraphicsSurface& surface) const{
-		
-			SwapChain swap_chain(&device, surface.m_surface);
 
-			// determining the size of the swap chain images	
-			swap_chain.setExtent(surface.m_width, surface.m_height);
-
-			// determining the queues that are going to access the swap chain
-			swap_chain.m_queue_ids = std::vector<uint32_t>(device.m_unique_queue_family_ids.begin(), device.m_unique_queue_family_ids.end()); 
-			
-			return swap_chain;
+			return SwapChain(&device, &surface);
 		}
 
     } // namespace  graphics

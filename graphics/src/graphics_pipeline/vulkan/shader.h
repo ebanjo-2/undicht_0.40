@@ -29,18 +29,17 @@ namespace undicht {
 			// shader stages
 			std::vector<vk::PipelineShaderStageCreateInfo>* m_stages = 0;
 
-			vk::Device* m_device_handle = 0;
+            const GraphicsDevice* m_device_handle = 0;
 
 			friend GraphicsDevice;
 			friend Renderer;
 
-			Shader(vk::Device* device);
-
-            void cleanUp();
 
 		public:
 
-			~Shader();
+            Shader(const GraphicsDevice* device);
+            ~Shader();
+            void cleanUp();
 
             // loading source code
 

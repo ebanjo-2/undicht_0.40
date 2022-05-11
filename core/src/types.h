@@ -6,7 +6,8 @@ namespace undicht {
     enum class Type {
         INT, // group of all integer types (short, char, int, long, ...)
         UNSIGNED_INT,
-        FLOAT
+        FLOAT,
+        COLOR
     };
 
     class FixedType {
@@ -57,6 +58,11 @@ namespace undicht {
 #define UND_VEC2I FixedType(Type::INT, 4, 2)
 #define UND_VEC3I FixedType(Type::INT, 4, 3)
 #define UND_VEC4I FixedType(Type::INT, 4, 4)
+
+#define UND_R8 FixedType(Type::COLOR, 1, 1)
+#define UND_R8G8 FixedType(Type::COLOR, 1, 2)
+#define UND_R8G8B8 FixedType(Type::COLOR, 1, 3)
+#define UND_R8G8B8A8 FixedType(Type::COLOR, 1, 4)
 
 } // namespace undicht
 

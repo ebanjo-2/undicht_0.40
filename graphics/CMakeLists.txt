@@ -41,6 +41,15 @@ set(GRAPHICS_PIPELINE_SOURCES
 
 )
 
+set(GRAPHICS_USER_INTERFACE_SOURCES
+
+		src/user_interface/font.h
+		src/user_interface/font.cpp
+		src/user_interface/font_renderer.h
+		src/user_interface/font_renderer.cpp
+
+)
+
 add_library(graphics
 
     src/undicht_graphics.h
@@ -49,6 +58,7 @@ add_library(graphics
     ${GRAPHICS_WINDOW_SOURCES}
     ${GRAPHICS_CORE_SOURCES}
 		${GRAPHICS_PIPELINE_SOURCES}
+		${GRAPHICS_USER_INTERFACE_SOURCES}
     ${Vulkan_INCLUDE_DIRS}/vulkan/vulkan.hpp
 )
 

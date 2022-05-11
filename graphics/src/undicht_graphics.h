@@ -28,4 +28,7 @@
 #include "graphics_pipeline/vulkan/texture.h"
 #endif // USE_VULKAN
 
+#include "user_interface/font.h"
+#include "user_interface/font_renderer.h"
+
 #endif // UNDICHT_GRAPHICS_H

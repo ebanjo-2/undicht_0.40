@@ -109,6 +109,17 @@ namespace undicht {
 
         }
 
+        void UniformBuffer::updateBuffer(uint32_t current_frame) {
+
+            // updating the buffer belonging to the current frame
+            if(!m_buffers_updated.at(current_frame)) {
+
+                m_buffers.at(current_frame).setData(m_tmp_buffer.data(), m_tmp_buffer.size(), 0);
+                m_buffers_updated.at(current_frame) = true;
+            }
+
+        }
+
         //////////////////////////////////// using more than one frame in flight //////////////////////////////////
 
         void UniformBuffer::setMaxFramesInFlight(uint32_t count) {
@@ -153,17 +164,6 @@ namespace undicht {
             std::copy((const char*)data, (const char*)data + byte_size, m_tmp_buffer.begin() + m_offsets.at(index));
 
             std::fill(m_buffers_updated.begin(), m_buffers_updated.end(), false);
-        }
-
-        void UniformBuffer::updateBuffer(uint32_t current_frame) {
-
-            // updating the buffer belonging to the current frame
-            if(!m_buffers_updated.at(current_frame)) {
-
-                m_buffers.at(current_frame).setData(m_tmp_buffer.data(), m_tmp_buffer.size(), 0);
-                m_buffers_updated.at(current_frame) = true;
-            }
-
         }
 
     } // graphics

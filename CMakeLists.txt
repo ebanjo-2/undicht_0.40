@@ -16,3 +16,4 @@ add_subdirectory(tools)
 
 # adding examples
 add_subdirectory(examples/hello_world)
+add_subdirectory(examples/user_interface)

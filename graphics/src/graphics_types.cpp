@@ -26,6 +26,11 @@ namespace undicht {
                     if(type.m_size == 4) return vk::Format::eR32Sint;
                     if(type.m_size == 8) return vk::Format::eR64Sint;
                 }
+
+                if(type.m_type == Type::COLOR) {
+                    // different types of color
+                    if(type.m_size == 1) return vk::Format::eR8Srgb;
+                }
             }
 
             if(type.m_num_components == 2) {
@@ -43,6 +48,11 @@ namespace undicht {
                     if(type.m_size == 2) return vk::Format::eR16G16Sint;
                     if(type.m_size == 4) return vk::Format::eR32G32Sint;
                     if(type.m_size == 8) return vk::Format::eR64G64Sint;
+                }
+
+                if(type.m_type == Type::COLOR) {
+                    // different types of color
+                    if(type.m_size == 1) return vk::Format::eR8G8Srgb;
                 }
             }
 
@@ -62,6 +72,10 @@ namespace undicht {
                     if(type.m_size == 4) return vk::Format::eR32G32B32Sint;
                     if(type.m_size == 8) return vk::Format::eR64G64B64Sint;
                 }
+                if(type.m_type == Type::COLOR) {
+                    // different types of color
+                    if(type.m_size == 1) return vk::Format::eR8G8B8Srgb;
+                }
             }
 
             if(type.m_num_components == 4) {
@@ -79,6 +93,10 @@ namespace undicht {
                     if(type.m_size == 2) return vk::Format::eR16G16B16A16Sint;
                     if(type.m_size == 4) return vk::Format::eR32G32B32A32Sint;
                     if(type.m_size == 8) return vk::Format::eR64G64B64A64Sint;
+                }
+                if(type.m_type == Type::COLOR) {
+                    // different types of color
+                    if(type.m_size == 1) return vk::Format::eR8G8B8A8Srgb;
                 }
             }
 

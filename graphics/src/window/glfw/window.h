@@ -49,6 +49,7 @@ namespace undicht {
                 bool isFullscreen() const;
 
                 void update();
+                void waitForEvent();
 
                 // events
                 bool shouldClose() const;

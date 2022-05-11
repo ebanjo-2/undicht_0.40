@@ -4,6 +4,7 @@
 #include "core/vulkan/vulkan_declaration.h"
 #include "cstdint"
 #include "graphics_pipeline/vulkan/vram_buffer.h"
+#include "types.h"
 
 namespace undicht {
 
@@ -13,11 +14,12 @@ namespace undicht {
         class Renderer;
 
         class Texture {
-        private:
+        protected:
 
             uint32_t m_width = 0;
             uint32_t m_height = 0;
             uint32_t m_layers = 1;
+            FixedType m_pixel_type = UND_R8;
 
             vk::Image* m_image = 0;
             vk::ImageView* m_image_view = 0;
@@ -33,18 +35,17 @@ namespace undicht {
             friend Renderer;
             const GraphicsDevice* m_device_handle = 0;
 
-            Texture(const GraphicsDevice* device);
-
-            void cleanUp();
-
         public:
 
+            Texture(const GraphicsDevice* device);
             ~Texture();
+            void cleanUp();
 
         public:
             // specifying the textures layout
 
             void setSize(uint32_t width, uint32_t height, uint32_t layers = 1);
+            void setFormat(const FixedType& format);
 
             void finalizeLayout();
 
@@ -58,7 +59,7 @@ namespace undicht {
             // tells the descriptors that this texture will be accessed in the shader under the index
             void writeDescriptorSets(const std::vector<vk::DescriptorSet>* shader_descriptors, uint32_t index, uint32_t frame_id) const;
 
-            void allocate(uint32_t byte_size);
+            void allocate();
 
             // the texture can be transitioned between different layouts
             // this way it can be in the optimal layout for transferring data, graphics, ..

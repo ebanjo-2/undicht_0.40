@@ -3,6 +3,7 @@
 #include "debug.h"
 #include "undicht_graphics.h"
 #include "images/image_file.h"
+#include "fonts/true_type.h"
 
 #include "time.h"
 
@@ -11,7 +12,7 @@ using namespace graphics;
 
 // root dir of the hello world example
 const std::string PROJECT_DIR = std::string(__FILE__).substr(0, std::string(__FILE__).rfind('/')) + "/../";
-const int MAX_FRAMES_IN_FLIGHT = 10;
+const int MAX_FRAMES_IN_FLIGHT = 2;
 
 int main() {
 
@@ -74,7 +75,6 @@ int main() {
 		uint32_t current_frame = swap_chain.beginFrame();
         renderer.setCurrentFrameID(current_frame);
 
-
         // updating the uniform buffer
         std::array<float, 4> pos = {0.2f, 0.0f, 0.3f, 0.0f};
         float t = (time(0) % 60) / 30.0f - 1.0f;
@@ -107,7 +107,7 @@ int main() {
         // checking if the window is minimized
         while (window.isMinimized()) {
             UND_LOG << "waiting \n";
-            window.update();
+            window.waitForEvent();
         }
 
 	}

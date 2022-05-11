@@ -51,6 +51,12 @@ namespace undicht {
 
         }
 
+        void Texture::setFormat(const FixedType& format) {
+
+            *m_format = translateVulkanFormat(format);
+            m_pixel_type = format;
+        }
+
         void Texture::finalizeLayout() {
 
             vk::ImageCreateInfo info;
@@ -67,7 +73,7 @@ namespace undicht {
 
             *m_image = m_device_handle->m_device->createImage(info);
 
-            allocate(m_width * m_height * 4);
+            allocate();
 
             initImageView();
             initSampler();
@@ -152,7 +158,7 @@ namespace undicht {
 
         }
 
-        void Texture::allocate(uint32_t byte_size) {
+        void Texture::allocate() {
 
             // getting the requirements needed for the texture
             vk::MemoryRequirements requirements;

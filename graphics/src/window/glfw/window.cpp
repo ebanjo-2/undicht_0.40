@@ -118,6 +118,11 @@ namespace undicht {
 
         }
 
+        void Window::waitForEvent() {
+
+            glfwWaitEvents();
+        }
+
         bool Window::shouldClose() const{
 
             return glfwWindowShouldClose(m_window);
@@ -130,7 +135,7 @@ namespace undicht {
 
         bool Window::isMinimized() const {
 
-            return (m_width == 0) || (m_height == 0);
+            return glfwGetWindowAttrib(m_window, GLFW_ICONIFIED);
         }
 
     } // namespace graphics

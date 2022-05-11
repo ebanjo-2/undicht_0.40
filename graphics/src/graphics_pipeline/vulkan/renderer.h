@@ -18,8 +18,8 @@ namespace undicht {
 		class GraphicsDevice;
 
 		class Renderer {
-		
-		private:
+
+        protected:
 
 			// pipeline layout (settings)
             std::vector<vk::VertexInputBindingDescription>* m_vertex_bindings = 0;
@@ -129,10 +129,11 @@ namespace undicht {
 
 		private:
 
-            void bindVertexBuffer(vk::CommandBuffer* cmd, const VertexBuffer* vbo);
+            void bindVertexBuffer(vk::CommandBuffer* cmd);
             void bindDescriptorSets(vk::CommandBuffer* cmd);
 
-            void recordCommandBuffer(vk::CommandBuffer* cmd_buffer, const VertexBuffer* vbo);
+            void recordCommandBuffer(vk::CommandBuffer* cmd_buffer);
+            void recordDrawCommands(vk::CommandBuffer* cmd_buffer);
 			void submitCommandBuffer(vk::CommandBuffer* cmd_buffer, std::vector<vk::Semaphore>* wait_on, vk::Semaphore* render_finished, vk::Fence* render_finished_fence);
 
 		};

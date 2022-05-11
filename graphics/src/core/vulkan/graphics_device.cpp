@@ -181,7 +181,7 @@ namespace undicht {
 
 		Shader GraphicsDevice::createShader() const {
 
-			return Shader(m_device); 
+			return Shader(this);
 		}
 
 		Renderer GraphicsDevice::createRenderer() const {

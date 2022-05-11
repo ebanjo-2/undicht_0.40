@@ -31,6 +31,7 @@ namespace undicht {
         class VramBuffer;
         class UniformBuffer;
         class Texture;
+        class Shader;
 
         class GraphicsDevice {
 
@@ -44,6 +45,7 @@ namespace undicht {
             friend VramBuffer;
             friend UniformBuffer;
             friend Texture;
+            friend Shader;
 
             vk::PhysicalDevice* m_physical_device = 0;
             vk::Device * m_device = 0;
@@ -103,6 +105,11 @@ namespace undicht {
             VertexBuffer createVertexBuffer() const;
             UniformBuffer createUniformBuffer() const;
             Texture createTexture() const;
+
+            template<typename T>
+            T create() const {
+                return T(this);
+            }
 
         };
 

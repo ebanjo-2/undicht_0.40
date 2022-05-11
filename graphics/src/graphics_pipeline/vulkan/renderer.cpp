@@ -312,10 +312,10 @@ namespace undicht {
 
             m_max_frames_in_flight = num;
 
-            for(std::vector<bool> v : m_ubos_updated_for_frame)
+            for(std::vector<bool>& v : m_ubos_updated_for_frame)
                 v.resize(num);
 
-            for(std::vector<bool> v : m_text_updated_for_frame)
+            for(std::vector<bool>& v : m_text_updated_for_frame)
                 v.resize(num);
 
         }
@@ -447,7 +447,7 @@ namespace undicht {
             index -= m_ubos.size();
 
             if(m_textures.size() <= index) {
-                UND_ERROR << "failed to submit texture: the index was is to big for this renderer\n";
+                UND_ERROR << "failed to submit texture: the index is to big for this renderer\n";
                 return;
             }
 
@@ -482,7 +482,7 @@ namespace undicht {
             std::vector<vk::Semaphore> wait_on({*image_ready});
 
             // record the command buffer
-            recordCommandBuffer(cmd, m_vbo);
+            recordCommandBuffer(cmd);
 
 			// submit the command buffer
 			submitCommandBuffer(cmd, &wait_on, render_finished, render_finished_fence);
@@ -490,14 +490,14 @@ namespace undicht {
 
 		/////////////////////////////////////// private draw functions ////////////////////////////
 
-        void Renderer::bindVertexBuffer(vk::CommandBuffer* cmd, const VertexBuffer* vbo) {
+        void Renderer::bindVertexBuffer(vk::CommandBuffer* cmd) {
 
             // binding the per vertex data
-            cmd->bindVertexBuffers(0, *vbo->m_vertex_data.m_buffer, {0});
+            cmd->bindVertexBuffers(0, *m_vbo->m_vertex_data.m_buffer, {0});
 
             // binding the per instance data
-            if(vbo->usesInstancing())
-                cmd->bindVertexBuffers(1, *vbo->m_instance_data.m_buffer, {0});
+            if(m_vbo->usesInstancing())
+                cmd->bindVertexBuffers(1, *m_vbo->m_instance_data.m_buffer, {0});
         }
 
         void Renderer::bindDescriptorSets(vk::CommandBuffer* cmd) {
@@ -507,7 +507,7 @@ namespace undicht {
         }
 
 
-        void Renderer::recordCommandBuffer(vk::CommandBuffer* cmd_buffer, const VertexBuffer* vbo) {
+        void Renderer::recordCommandBuffer(vk::CommandBuffer* cmd_buffer) {
 
             // getting the framebuffer that gets drawn to
             int image_index = m_swap_chain_handle->getCurrentImageID();
@@ -530,22 +530,28 @@ namespace undicht {
             cmd_buffer->beginRenderPass(render_pass_info, vk::SubpassContents::eInline);
 
             // draw commands
-            cmd_buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *m_pipeline);
-            bindVertexBuffer(cmd_buffer, m_vbo);
-            bindDescriptorSets(cmd_buffer);
-
-            if(vbo->usesIndices()) {
-                cmd_buffer->bindIndexBuffer(*m_vbo->m_index_data.m_buffer, 0, vk::IndexType::eUint32);
-                cmd_buffer->drawIndexed(vbo->getVertexCount(), vbo->getInstanceCount(), 0, 0, 0);
-            } else {
-                cmd_buffer->draw(vbo->getVertexCount(), vbo->getInstanceCount(), 0, 0);
-            }
+            recordDrawCommands(cmd_buffer);
 
             // ending the render pass
             cmd_buffer->endRenderPass();
 
             // finishing the draw buffer
             cmd_buffer->end();
+        }
+
+        void Renderer::recordDrawCommands(vk::CommandBuffer* cmd_buffer) {
+
+            cmd_buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *m_pipeline);
+            bindVertexBuffer(cmd_buffer);
+            bindDescriptorSets(cmd_buffer);
+
+            if(m_vbo->usesIndices()) {
+                cmd_buffer->bindIndexBuffer(*m_vbo->m_index_data.m_buffer, 0, vk::IndexType::eUint32);
+                cmd_buffer->drawIndexed(m_vbo->getVertexCount(), m_vbo->getInstanceCount(), 0, 0, 0);
+            } else {
+                cmd_buffer->draw(m_vbo->getVertexCount(), m_vbo->getInstanceCount(), 0, 0);
+            }
+
         }
 
 		void Renderer::submitCommandBuffer(vk::CommandBuffer* cmd_buffer, std::vector<vk::Semaphore>* wait_on, vk::Semaphore* render_finished, vk::Fence* render_finished_fence) {

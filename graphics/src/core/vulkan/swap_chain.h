@@ -52,9 +52,9 @@ namespace undicht {
             vk::PhysicalDevice* m_physical_device_handle = 0;
 			vk::Device* m_device_handle = 0;
 			vk::Queue* m_present_queue_handle = 0;
-			vk::SurfaceKHR* m_surface_handle = 0;
+            const GraphicsSurface* m_surface_handle = 0;
 
-			SwapChain(GraphicsDevice* device, vk::SurfaceKHR* surface);
+			SwapChain(GraphicsDevice* device, GraphicsSurface* surface);
 
         public:
 

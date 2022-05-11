@@ -3,6 +3,9 @@ add_library("tools"
 		src/images/image_file.h
 		src/images/image_file.cpp
 		
+		src/fonts/true_type.h
+		src/fonts/true_type.cpp
+		
 		extern/stb_implementation.cpp
 )
 

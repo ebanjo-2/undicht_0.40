@@ -45,6 +45,7 @@ namespace undicht {
             void initMemoryOffsets();
 
             void writeDescriptorSets(const std::vector<vk::DescriptorSet>* shader_descriptors, uint32_t index, uint32_t frame_id) const;
+            void updateBuffer(uint32_t current_frame);
 
         public:
             // using more than one frame in flight
@@ -65,7 +66,6 @@ namespace undicht {
             // setting data
 
             void setData(uint32_t index, const void* data, uint32_t byte_size);
-            void updateBuffer(uint32_t current_frame);
 
         };
 
