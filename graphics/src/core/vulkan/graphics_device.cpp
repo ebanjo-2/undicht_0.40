@@ -15,6 +15,7 @@ namespace undicht {
 
             m_physical_device = new vk::PhysicalDevice;
             *m_physical_device = device;
+            m_device = new vk::Device;
 
             m_graphics_queue = new vk::Queue;
             m_present_queue = new vk::Queue;
@@ -27,21 +28,7 @@ namespace undicht {
             m_graphics_command_pool = new vk::CommandPool;
             m_transfer_command_pool = new vk::CommandPool;
 
-            // getting info about which queue families the logical device needs
-            float priority = 1.0f;
-            std::vector<vk::DeviceQueueCreateInfo> queue_infos = getQueueCreateInfos(&priority);
-
-            // specifying which device features are required
-	   		vk::PhysicalDeviceFeatures features;
-            features.samplerAnisotropy = VK_TRUE;
-
-            // creating the logical device
-	        vk::DeviceCreateInfo info({}, queue_infos.size(), queue_infos.data(), 0, {}, extensions.size(), extensions.data(), &features);
-            m_device = new vk::Device;
-            *m_device = m_physical_device->createDevice(info);
-
-			retrieveQueueHandles();
-            initCmdPools();
+            initLogicalDevice(extensions);
 		}
 
         GraphicsDevice::~GraphicsDevice() {
@@ -62,18 +49,68 @@ namespace undicht {
 
         }
 
+        //////////////////////////////////////////////// interface //////////////////////////////////////////////
+
+        void GraphicsDevice::setMaxFramesInFlight(uint32_t max_frames) {
+            // it is possible to render multiple frames in parallel
+            // this might increase performance but may also increase latency
+            // 2 should be a good number
+
+            m_max_frames_in_flight = max_frames;
+        }
+
+        uint32_t GraphicsDevice::getMaxFramesInFlight() const {
+
+            return m_max_frames_in_flight;
+        }
+
+        uint32_t GraphicsDevice::beginFrame() {
+
+            m_current_frame = (m_current_frame + 1) % m_max_frames_in_flight;
+
+            return m_current_frame;
+        }
+
+        void GraphicsDevice::endFrame() {
+
+        }
+
+        uint32_t GraphicsDevice::getCurrentFrameID() const {
+
+            return m_current_frame;
+        }
+
+        std::string GraphicsDevice::info() const {
+
+            vk::PhysicalDeviceProperties properties;
+            m_physical_device->getProperties(&properties);
+
+            return properties.deviceName;
+        }
+
+        void GraphicsDevice::waitForProcessesToFinish() {
+
+            // waiting for all processes to stop
+            m_device->waitIdle();
+
+        }
 
         /////////////////////////////// initializing the GraphicsDevice //////////////////////////
 
-        void GraphicsDevice::retrieveQueueHandles() {
-            // getting the queue handles from the logical device
+        void GraphicsDevice::initLogicalDevice(const std::vector<const char*>& extensions) {
 
-            m_device->getQueue(m_graphics_queue_id, 0, m_graphics_queue);
-            m_device->getQueue(m_present_queue_id, 0, m_present_queue);
-            m_device->getQueue(m_transfer_queue_id, 0, m_transfer_queue);
+            std::vector<vk::DeviceQueueCreateInfo> queue_infos = getQueueCreateInfos();
+            vk::PhysicalDeviceFeatures features = getDeviceFeatures();
+            vk::DeviceCreateInfo info = getDeviceCreateInfo(&queue_infos, &extensions, &features);
+
+            // creating the logical device
+            *m_device = m_physical_device->createDevice(info);
+
+            initQueueHandles();
+            initCmdPools();
         }
 
-        std::vector<vk::DeviceQueueCreateInfo> GraphicsDevice::getQueueCreateInfos(float* priority) {
+        std::vector<vk::DeviceQueueCreateInfo> GraphicsDevice::getQueueCreateInfos() {
 
             // only requesting unique queue ids
             m_unique_queue_family_ids = {m_graphics_queue_id, m_present_queue_id, m_transfer_queue_id};
@@ -81,11 +118,44 @@ namespace undicht {
 
             for(const uint32_t& id : m_unique_queue_family_ids) {
 
-                queue_infos.emplace_back(vk::DeviceQueueCreateInfo({}, id, 1, priority));
+                queue_infos.emplace_back(vk::DeviceQueueCreateInfo({}, id, 1, &m_queue_priority));
             }
 
             return queue_infos;
         }
+
+        vk::PhysicalDeviceFeatures GraphicsDevice::getDeviceFeatures() {
+
+            // specifying which device features are required
+            vk::PhysicalDeviceFeatures features;
+            features.samplerAnisotropy = VK_TRUE;
+
+            return features;
+        }
+
+        vk::DeviceCreateInfo GraphicsDevice::getDeviceCreateInfo(std::vector<vk::DeviceQueueCreateInfo>* queue_infos, const std::vector<const char*>* extensions, vk::PhysicalDeviceFeatures* features) {
+
+            vk::DeviceCreateInfo info;
+            info.queueCreateInfoCount = queue_infos->size();
+            info.pQueueCreateInfos = queue_infos->data();
+            info.enabledLayerCount = 0;
+            info.ppEnabledLayerNames = {};
+            info.enabledExtensionCount = extensions->size();
+            info.ppEnabledExtensionNames = extensions->data();
+            info.pEnabledFeatures = features;
+
+            return info;
+        }
+
+        void GraphicsDevice::initQueueHandles() {
+            // getting the queue handles from the logical device
+
+            m_device->getQueue(m_graphics_queue_id, 0, m_graphics_queue);
+            m_device->getQueue(m_present_queue_id, 0, m_present_queue);
+            m_device->getQueue(m_transfer_queue_id, 0, m_transfer_queue);
+        }
+
+
 
         void GraphicsDevice::initCmdPools() {
 
@@ -157,52 +227,6 @@ namespace undicht {
             properties = m_physical_device->getProperties();
 
             return properties.limits.maxSamplerAnisotropy;
-        }
-
-        //////////////////////////////////////////////// interface //////////////////////////////////////////////
-
-        std::string GraphicsDevice::info() const {
-
-            vk::PhysicalDeviceProperties properties;
-            m_physical_device->getProperties(&properties);
-
-            return properties.deviceName;
-        }
-
-		void GraphicsDevice::waitForProcessesToFinish() {
-
-			// waiting for all processes to stop
-			m_device->waitIdle();
-
-		}
-
-
-        ///////////////////////////////////////// creating objects on the gpu /////////////////////////////////////
-
-		Shader GraphicsDevice::createShader() const {
-
-			return Shader(this);
-		}
-
-		Renderer GraphicsDevice::createRenderer() const {
-
-			return Renderer(this);
-		}
-
-        VertexBuffer GraphicsDevice::createVertexBuffer() const {
-
-            return VertexBuffer(this);
-        }
-
-        UniformBuffer GraphicsDevice::createUniformBuffer() const {
-
-
-            return UniformBuffer(this);
-        }
-
-        Texture GraphicsDevice::createTexture() const {
-
-            return Texture(this);
         }
 
     }

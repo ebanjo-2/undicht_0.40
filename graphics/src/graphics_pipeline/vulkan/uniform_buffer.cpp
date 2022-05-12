@@ -120,16 +120,6 @@ namespace undicht {
 
         }
 
-        //////////////////////////////////// using more than one frame in flight //////////////////////////////////
-
-        void UniformBuffer::setMaxFramesInFlight(uint32_t count) {
-            // the uniform data might need to be updated for every frame in flight
-            // which shouldn't be done while the data is being used in rendering
-            // so there is an internal buffer for each frame
-
-            m_max_frames_in_flight = count;
-
-        }
 
         /////////////////////////////////// specifying memory layout ////////////////////////////////////////
         /// (should not be changed once the buffer has been submitted to a renderer)
@@ -152,8 +142,8 @@ namespace undicht {
             // call this after the layout + max frames in flight have been set
             // and before storing any data in the buffer
 
-            initBuffers(m_max_frames_in_flight);
-            m_buffers_updated.resize(m_max_frames_in_flight);
+            initBuffers(m_device_handle->getMaxFramesInFlight());
+            m_buffers_updated.resize(m_device_handle->getMaxFramesInFlight());
         }
 
         /////////////////////////////////////// setting data ///////////////////////////////////////

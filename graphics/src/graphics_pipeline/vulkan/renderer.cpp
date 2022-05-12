@@ -30,6 +30,7 @@ namespace undicht {
 
 			// creating other member objects
 			m_layout = new vk::PipelineLayout;
+            m_subpass_description = new vk::SubpassDescription;
 			m_render_pass = new vk::RenderPass;
 			m_pipeline = new vk::Pipeline;
 			m_swap_frame_buffers = new std::vector<vk::Framebuffer>;
@@ -51,6 +52,7 @@ namespace undicht {
             delete m_swap_frame_buffers;
 			delete m_cmd_buffer;
 			delete m_layout;
+            delete m_subpass_description;
 			delete m_render_pass;
 			delete m_pipeline;
 		}
@@ -192,8 +194,9 @@ namespace undicht {
 			getTextureAttachments(&attachments, &attachment_refs);
 
 			// creating subpasses
-			m_subpass.setAttachments(&attachment_refs);
-			std::vector<vk::SubpassDescription> subpasses({*m_subpass.m_description});
+            m_subpass_description->setPipelineBindPoint(vk::PipelineBindPoint::eGraphics);
+            m_subpass_description->setColorAttachments(attachment_refs);
+			std::vector<vk::SubpassDescription> subpasses({*m_subpass_description});
 
 			// declaring the stages the subpass depends on
 			vk::SubpassDependency subpass_dependency(VK_SUBPASS_EXTERNAL, 0);
@@ -234,7 +237,7 @@ namespace undicht {
             }
 
             // creating a command buffer for each frame in flight
-			vk::CommandBufferAllocateInfo allocate_info(*m_device_handle->m_graphics_command_pool, vk::CommandBufferLevel::ePrimary, m_max_frames_in_flight);
+			vk::CommandBufferAllocateInfo allocate_info(*m_device_handle->m_graphics_command_pool, vk::CommandBufferLevel::ePrimary, m_device_handle->getMaxFramesInFlight());
 			*m_cmd_buffer = m_device_handle->m_device->allocateCommandBuffers(allocate_info);
 
 		}
@@ -274,8 +277,10 @@ namespace undicht {
 
         void Renderer::createShaderInputDescriptorPool() {
 
-            vk::DescriptorPoolSize ubo_pool_size(vk::DescriptorType::eUniformBuffer, m_max_frames_in_flight * m_ubos.size());
-            vk::DescriptorPoolSize tex_pool_size(vk::DescriptorType::eCombinedImageSampler, m_max_frames_in_flight * m_textures.size());
+            uint32_t max_frames_in_flight = m_device_handle->getMaxFramesInFlight();
+
+            vk::DescriptorPoolSize ubo_pool_size(vk::DescriptorType::eUniformBuffer, max_frames_in_flight * m_ubos.size());
+            vk::DescriptorPoolSize tex_pool_size(vk::DescriptorType::eCombinedImageSampler, max_frames_in_flight * m_textures.size());
 
             std::vector<vk::DescriptorPoolSize> pool_sizes;
 
@@ -286,7 +291,7 @@ namespace undicht {
                 pool_sizes.push_back(tex_pool_size);
 
             if(pool_sizes.size()) {
-                vk::DescriptorPoolCreateInfo info({}, m_max_frames_in_flight, pool_sizes, nullptr);
+                vk::DescriptorPoolCreateInfo info({}, max_frames_in_flight, pool_sizes, nullptr);
                 *m_shader_input_descriptor_pool = m_device_handle->m_device->createDescriptorPool(info);
             }
 
@@ -297,9 +302,9 @@ namespace undicht {
             if(!(m_ubos.size() || m_textures.size()))
                 return;
 
-            std::vector<vk::DescriptorSetLayout> layouts(m_max_frames_in_flight, *m_shader_layout);
+            std::vector<vk::DescriptorSetLayout> layouts(m_device_handle->getMaxFramesInFlight(), *m_shader_layout);
             vk::DescriptorSetAllocateInfo info(*m_shader_input_descriptor_pool, layouts);
-            info.setDescriptorSetCount(m_max_frames_in_flight);
+            info.setDescriptorSetCount(m_device_handle->getMaxFramesInFlight());
 
             // allocate descriptor sets (destroyed when the descriptor pool is destroyed)
             *m_shader_descriptors = m_device_handle->m_device->allocateDescriptorSets(info);
@@ -307,24 +312,6 @@ namespace undicht {
         }
 
 		//////////////////////////////// pipeline settings /////////////////////////////////////
-
-        void Renderer::setMaxFramesInFlight(uint32_t num) {
-
-            m_max_frames_in_flight = num;
-
-            for(std::vector<bool>& v : m_ubos_updated_for_frame)
-                v.resize(num);
-
-            for(std::vector<bool>& v : m_text_updated_for_frame)
-                v.resize(num);
-
-        }
-
-        void Renderer::setCurrentFrameID(uint32_t frame) {
-
-            m_current_frame = frame;
-        }
-
 
 		void Renderer::setVertexBufferLayout(const VertexBuffer& vbo_prototype) {
 
@@ -342,8 +329,8 @@ namespace undicht {
             m_ubos.resize(ubo_count);
             m_textures.resize(tex_count);
 
-            m_ubos_updated_for_frame.resize(ubo_count, std::vector<bool>(m_max_frames_in_flight));
-            m_text_updated_for_frame.resize(tex_count, std::vector<bool>(m_max_frames_in_flight));
+            m_ubos_updated_for_frame.resize(ubo_count, std::vector<bool>(m_device_handle->getMaxFramesInFlight()));
+            m_text_updated_for_frame.resize(tex_count, std::vector<bool>(m_device_handle->getMaxFramesInFlight()));
         }
 
 		void Renderer::setShader(Shader* shader) {
@@ -432,13 +419,14 @@ namespace undicht {
                 m_ubos.at(index) = ubo;
             }
 
-            if(!m_ubos_updated_for_frame.at(index).at(m_current_frame)) {
+            uint32_t current_frame = m_device_handle->getCurrentFrameID();
+            if(!m_ubos_updated_for_frame.at(index).at(current_frame)) {
 
-                ubo->writeDescriptorSets(m_shader_descriptors, index, m_current_frame);
-                m_ubos_updated_for_frame.at(index).at(m_current_frame) = true;
+                ubo->writeDescriptorSets(m_shader_descriptors, index, current_frame);
+                m_ubos_updated_for_frame.at(index).at(current_frame) = true;
             }
 
-            ubo->updateBuffer(m_current_frame);
+            ubo->updateBuffer(current_frame);
 
         }
 
@@ -457,10 +445,11 @@ namespace undicht {
                 m_textures.at(index) = tex;
             }
 
-            if(!m_text_updated_for_frame.at(index).at(m_current_frame)) {
+            uint32_t current_frame = m_device_handle->getCurrentFrameID();
+            if(!m_text_updated_for_frame.at(index).at(current_frame)) {
 
-                tex->writeDescriptorSets(m_shader_descriptors, index + m_ubos.size(), m_current_frame);
-                m_text_updated_for_frame.at(index).at(m_current_frame) = true;
+                tex->writeDescriptorSets(m_shader_descriptors, index + m_ubos.size(), current_frame);
+                m_text_updated_for_frame.at(index).at(current_frame) = true;
             }
 
         }
@@ -472,11 +461,13 @@ namespace undicht {
                 return;
             }
 
+            uint32_t current_frame = m_device_handle->getCurrentFrameID();
+
             // getting the objects that belong to this frame
-            vk::CommandBuffer* cmd = &m_cmd_buffer->at(m_current_frame);
-            vk::Semaphore* image_ready = &m_swap_chain_handle->m_image_available->at(m_current_frame);
-            vk::Semaphore* render_finished = &m_swap_chain_handle->m_render_finished->at(m_current_frame);
-            vk::Fence* render_finished_fence = &m_swap_chain_handle->m_frame_in_flight->at(m_current_frame);
+            vk::CommandBuffer* cmd = &m_cmd_buffer->at(current_frame);
+            vk::Semaphore* image_ready = &m_swap_chain_handle->m_image_available->at(current_frame);
+            vk::Semaphore* render_finished = &m_swap_chain_handle->m_render_finished->at(current_frame);
+            vk::Fence* render_finished_fence = &m_swap_chain_handle->m_frame_in_flight->at(current_frame);
 
             // the semaphores to wait on before drawing to the render target
             std::vector<vk::Semaphore> wait_on({*image_ready});
@@ -502,7 +493,7 @@ namespace undicht {
 
         void Renderer::bindDescriptorSets(vk::CommandBuffer* cmd) {
 
-            cmd->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *m_layout, 0, m_shader_descriptors->at(m_current_frame), nullptr);
+            cmd->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *m_layout, 0, m_shader_descriptors->at(m_device_handle->getCurrentFrameID()), nullptr);
 
         }
 

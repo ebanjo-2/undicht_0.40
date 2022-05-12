@@ -4,6 +4,16 @@
 #include "user_interface/font.h"
 #include "cstdint"
 
+#include "config.h"
+
+#ifdef PLATFORM_UNIX
+#define UND_DEFAULT_FONT "/usr/share/fonts/truetype/freefont/FreeSans.ttf"
+#endif
+
+#ifdef PLATFORM_WINDOWS
+#define UND_DEFAULT_FONT "C:\\Windows\\Fonts\\Arial.ttf"
+#endif
+
 namespace undicht {
 
     namespace tools {

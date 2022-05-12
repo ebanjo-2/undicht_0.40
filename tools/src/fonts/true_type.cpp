@@ -51,7 +51,7 @@ namespace undicht {
             const uint32_t char_count = last_char - first_char;
 
             // determining the size of the font map
-            int font_height = 32; // 32 pixels in height
+            int font_height = 64; // 64 pixels in height
             float font_map_width = 512; // fixed
             float font_map_height = calcFontMapHeight(font_height, char_count, font_map_width);
 

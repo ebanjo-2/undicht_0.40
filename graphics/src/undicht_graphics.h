@@ -1,10 +1,7 @@
 #ifndef UNDICHT_GRAPHICS_H
 #define UNDICHT_GRAPHICS_H
 
-// at some point these will be set by cmake
-#define USE_GLFW true
-#define USE_VULKAN true
-
+#include "config.h"
 #include "graphics_types.h"
 
 
@@ -22,7 +19,6 @@
 
 #include "graphics_pipeline/vulkan/shader.h"
 #include "graphics_pipeline/vulkan/renderer.h"
-#include "graphics_pipeline/vulkan/render_subpass.h"
 #include "graphics_pipeline/vulkan/vertex_buffer.h"
 #include "graphics_pipeline/vulkan/uniform_buffer.h"
 #include "graphics_pipeline/vulkan/texture.h"

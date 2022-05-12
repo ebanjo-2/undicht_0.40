@@ -23,12 +23,9 @@ namespace undicht {
             std::vector<bool> m_buffers_updated; // true if he buffer of a frame has been updated with the tmp data
             std::vector<uint32_t> m_offsets; // offsets into the buffer for correct alignment
 
-            uint32_t m_max_frames_in_flight = 1;
-
             friend Renderer;
             friend GraphicsDevice;
             const GraphicsDevice* m_device_handle = 0;
-
 
             UniformBuffer(const GraphicsDevice* device);
 
@@ -46,11 +43,6 @@ namespace undicht {
 
             void writeDescriptorSets(const std::vector<vk::DescriptorSet>* shader_descriptors, uint32_t index, uint32_t frame_id) const;
             void updateBuffer(uint32_t current_frame);
-
-        public:
-            // using more than one frame in flight
-
-            void setMaxFramesInFlight(uint32_t count);
 
         public:
             // specifying the memory layout (should not be changed once the buffer has been submitted to a renderer)

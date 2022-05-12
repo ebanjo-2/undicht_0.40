@@ -16,43 +16,21 @@ namespace undicht {
 
 		SwapChain::SwapChain(GraphicsDevice* device, GraphicsSurface* surface) {
 
-            m_physical_device_handle = device->m_physical_device;
-			m_device_handle = device->m_device;
-			m_present_queue_handle = device->m_present_queue;
+			m_device_handle = device;
 			m_surface_handle = surface;
-
-            // checking device capabilities
-            if(!checkDeviceCapabilities(device->m_physical_device, surface->m_surface)) {
-                UND_ERROR << "failed to  create swap chain: device does not support any formats or present modes\n";
-                return;
-            }
-
-			// choosing the swap chain format	
-            chooseSwapImageFormat();
-
-			// choosing the present mode
-            choosePresentMode();
-
-			// determining the image count
-			m_image_count = findImageCount();
 
             // initializing sync objects
             m_image_available = new std::vector<vk::Semaphore>;
             m_render_finished = new std::vector<vk::Semaphore>;
             m_frame_in_flight = new std::vector<vk::Fence>;
-			
-			// initializing other vulkan members
-			m_extent = new vk::Extent2D;
-			m_images = new std::vector<vk::Image>;
-			m_image_views = new std::vector<vk::ImageView>;
-			m_swap_chain = new vk::SwapchainKHR;
 
-            // determining the size of the swap chain images
-            setExtent(surface->m_width, surface->m_height);
+            // initializing other vulkan members
+            m_extent = new vk::Extent2D;
+            m_images = new std::vector<vk::Image>;
+            m_image_views = new std::vector<vk::ImageView>;
+            m_swap_chain = new vk::SwapchainKHR;
 
-            // determining the queues that are going to access the swap chain
-            m_queue_ids = std::vector<uint32_t>(device->m_unique_queue_family_ids.begin(), device->m_unique_queue_family_ids.end());
-
+            initSwapChain();
         }
 
 		SwapChain::~SwapChain() {
@@ -82,24 +60,103 @@ namespace undicht {
 
             // waiting for the device to finish whatever it was doing
             // to make sure it isn't using any of the objects that are going to be modified
-            m_device_handle->waitIdle();
+            m_device_handle->m_device->waitIdle();
 
             for(vk::Semaphore& s : (*m_image_available))
-                m_device_handle->destroySemaphore(s);
+                m_device_handle->m_device->destroySemaphore(s);
 
             for(vk::Semaphore& s : (*m_render_finished))
-                m_device_handle->destroySemaphore(s);
+                m_device_handle->m_device->destroySemaphore(s);
 
             for(vk::Fence& f : (*m_frame_in_flight))
-                m_device_handle->destroyFence(f);
+                m_device_handle->m_device->destroyFence(f);
 
             for(vk::ImageView& image_view : (*m_image_views))
-                m_device_handle->destroyImageView(image_view);
+                m_device_handle->m_device->destroyImageView(image_view);
 
-            m_device_handle->destroySwapchainKHR(*m_swap_chain);
+            m_device_handle->m_device->destroySwapchainKHR(*m_swap_chain);
         }
 
         //////////////////////////////////// creating the swap chain ///////////////////////////////////////////////////
+
+        void SwapChain::initSwapChain() {
+
+            // checking device capabilities
+            if(!checkDeviceCapabilities(m_device_handle->m_physical_device, m_surface_handle->m_surface)) {
+                UND_ERROR << "failed to  create swap chain: device does not support any formats or present modes\n";
+                return;
+            }
+
+            // choosing the swap chain format
+            chooseSwapImageFormat();
+
+            // choosing the present mode
+            choosePresentMode();
+
+            // determining the image count
+            m_image_count = findImageCount();
+
+            // determining the queues that are going to access the swap chain
+            m_queue_ids = std::vector<uint32_t>(m_device_handle->m_unique_queue_family_ids.begin(), m_device_handle->m_unique_queue_family_ids.end());
+
+            // this will get the size of the surface and init the swap chain with recreateSwapChain()
+            matchSurfaceExtent(*m_surface_handle);
+        }
+
+        void SwapChain::recreateSwapChain() {
+            // updates the vk::SwapChain to represent the changes made
+
+            // destroying the old swapchain objects
+            cleanUp();
+
+            // creating sync objects
+            initSyncObjects();
+
+            // determining if the swap chain is going to be shared between queue families
+            vk::SharingMode sharing;
+
+            if(m_queue_ids.size() <= 1)
+                sharing = vk::SharingMode::eExclusive;
+            else
+                sharing = vk::SharingMode::eConcurrent;
+
+            // creating the swap chain
+            vk::SwapchainCreateInfoKHR info({}, *m_surface_handle->m_surface, m_image_count);
+            info.setImageFormat(m_format->format);
+            info.setImageColorSpace(m_format->colorSpace);
+            info.setImageExtent(*m_extent);
+            info.setImageArrayLayers(1);
+            info.setImageUsage(vk::ImageUsageFlagBits::eColorAttachment);
+            info.setImageSharingMode(sharing);
+            info.setQueueFamilyIndices(m_queue_ids);
+            info.setPreTransform(m_capabilities->currentTransform);
+            info.setCompositeAlpha(vk::CompositeAlphaFlagBitsKHR::eOpaque);
+            info.setPresentMode(*m_present_mode);
+            info.setClipped(VK_TRUE);
+
+            *m_swap_chain = m_device_handle->m_device->createSwapchainKHR(info);
+
+            // retrieving the swap images
+            retrieveSwapImages();
+
+        }
+
+        void SwapChain::retrieveSwapImages() {
+
+            *m_images = m_device_handle->m_device->getSwapchainImagesKHR(*m_swap_chain);
+
+            m_image_views->resize(m_images->size());
+            vk::ComponentMapping mapping; // defaults to vk::ComponentSwizzle::eIdentity for all components (rgba)
+            vk::ImageSubresourceRange sub_resource(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1);
+
+            for(int i = 0; i < m_images->size(); i++) {
+
+                vk::ImageViewCreateInfo info({}, m_images->at(i), vk::ImageViewType::e2D, m_format->format, mapping, sub_resource);
+                m_image_views->at(i) = m_device_handle->m_device->createImageView(info);
+
+            }
+
+        }
 
         bool SwapChain::checkDeviceCapabilities(vk::PhysicalDevice* device, vk::SurfaceKHR* surface) {
             // checking support details
@@ -183,74 +240,17 @@ namespace undicht {
             vk::SemaphoreCreateInfo semaphore_info;
             vk::FenceCreateInfo fence_info(vk::FenceCreateFlagBits::eSignaled); // set initial state as set
 
-            m_image_available->resize(m_max_frames_in_flight);
-            m_render_finished->resize(m_max_frames_in_flight);
-            m_frame_in_flight->resize(m_max_frames_in_flight);
+            m_image_available->resize(m_device_handle->getMaxFramesInFlight());
+            m_render_finished->resize(m_device_handle->getMaxFramesInFlight());
+            m_frame_in_flight->resize(m_device_handle->getMaxFramesInFlight());
 
-            for(int i = 0; i < m_max_frames_in_flight; i++) {
+            for(int i = 0; i < m_device_handle->getMaxFramesInFlight(); i++) {
 
-                m_image_available->at(i) = m_device_handle->createSemaphore(semaphore_info);
-                m_render_finished->at(i) = m_device_handle->createSemaphore(semaphore_info);
-                m_frame_in_flight->at(i) = m_device_handle->createFence(fence_info);
-
-            }
-        }
-
-        /////////////////////////////////////////// recreating the swap chain //////////////////////////////////////////
-
-		void SwapChain::update() {
-			// updates the vk::SwapChain to represent the changes made
-
-            // destroying the old swapchain objects
-            cleanUp();
-
-            // creating sync objects
-            initSyncObjects();
-
-            // determining if the swap chain is going to be shared between queue families
-			vk::SharingMode sharing;
-
-			if(m_queue_ids.size() <= 1)
-				sharing = vk::SharingMode::eExclusive;
-			else
-				sharing = vk::SharingMode::eConcurrent;
-
-            // creating the swap chain
-			vk::SwapchainCreateInfoKHR info({}, *m_surface_handle->m_surface, m_image_count);
-            info.setImageFormat(m_format->format);
-            info.setImageColorSpace(m_format->colorSpace);
-            info.setImageExtent(*m_extent);
-            info.setImageArrayLayers(1);
-            info.setImageUsage(vk::ImageUsageFlagBits::eColorAttachment);
-            info.setImageSharingMode(sharing);
-            info.setQueueFamilyIndices(m_queue_ids);
-            info.setPreTransform(m_capabilities->currentTransform);
-            info.setCompositeAlpha(vk::CompositeAlphaFlagBitsKHR::eOpaque);
-            info.setPresentMode(*m_present_mode);
-            info.setClipped(VK_TRUE);
-
-			*m_swap_chain = m_device_handle->createSwapchainKHR(info);
-
-			// retrieving the swap images
-            retrieveSwapImages();
-
-		}
-
-        void SwapChain::retrieveSwapImages() {
-
-            *m_images = m_device_handle->getSwapchainImagesKHR(*m_swap_chain);
-
-            m_image_views->resize(m_images->size());
-            vk::ComponentMapping mapping; // defaults to vk::ComponentSwizzle::eIdentity for all components (rgba)
-            vk::ImageSubresourceRange sub_resource(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1);
-
-            for(int i = 0; i < m_images->size(); i++) {
-
-                vk::ImageViewCreateInfo info({}, m_images->at(i), vk::ImageViewType::e2D, m_format->format, mapping, sub_resource);
-                m_image_views->at(i) = m_device_handle->createImageView(info);
+                m_image_available->at(i) = m_device_handle->m_device->createSemaphore(semaphore_info);
+                m_render_finished->at(i) = m_device_handle->m_device->createSemaphore(semaphore_info);
+                m_frame_in_flight->at(i) = m_device_handle->m_device->createFence(fence_info);
 
             }
-
         }
 
         ////////////////////////////////////////// swap chain settings /////////////////////////////////////////////////
@@ -260,7 +260,7 @@ namespace undicht {
             m_surface_handle = &surface;
 
             // update the surface capabilities
-            getSupportDetails(m_physical_device_handle, m_surface_handle->m_surface);
+            getSupportDetails(m_device_handle->m_physical_device, m_surface_handle->m_surface);
 
             // set the extent
             setExtent(surface.m_width, surface.m_height);
@@ -288,7 +288,7 @@ namespace undicht {
 			m_extent->setWidth(width);
 			m_extent->setHeight(height);
 
-			update();
+			recreateSwapChain();
 		}
 
 		void SwapChain::getExtent(uint32_t& width, uint32_t& height) const {
@@ -307,67 +307,43 @@ namespace undicht {
 			return m_extent->height;
 		}
 
-		void SwapChain::setMaxFramesInFlight(uint32_t count) {
-			// once a frame is finished it is presented
-			// instead of waiting for the frame to be done with being presented, 
-			// the gpu may also start working on the next frame
-			// even though this has the potential to increase performance, 
-			// it also needs more resources, since objects like command buffers can only be used by one frame at a time
-			// so they need to be copied for each frame in flight
+        uint32_t SwapChain::acquireNextImage() {
 
-			m_max_frames_in_flight = count;
+            int current_frame = m_device_handle->getCurrentFrameID();
 
-            update();
-            //initSyncObjects();
+            // wait for previous frame to finish
+			m_device_handle->m_device->waitForFences(1, &m_frame_in_flight->at(current_frame), VK_TRUE, UINT64_MAX);
+			m_device_handle->m_device->resetFences(1, &m_frame_in_flight->at(current_frame));
+			
+			// acquire new swap chain image
+            m_current_image = m_device_handle->m_device->acquireNextImageKHR(*m_swap_chain, UINT64_MAX,m_image_available->at(current_frame));
+
+            return m_current_image;
 		}
 
-		uint32_t SwapChain::getMaxFramesInFlight() const {
+		void SwapChain::presentImage() {
+
+            uint32_t current_frame = m_device_handle->getCurrentFrameID();
 		
-			return m_max_frames_in_flight;
-		}
+			// present the image once the processes using it have finished
+            std::vector<vk::Semaphore> render_finished({m_render_finished->at(current_frame)});
+			std::vector<vk::SwapchainKHR> swap_chains({*m_swap_chain});
+			std::vector<uint32_t> image_indices({m_current_image});
+			vk::PresentInfoKHR present_info(render_finished, swap_chains, image_indices);
 
-		uint32_t SwapChain::getCurrentFrameID() const {
+            try {
+                m_device_handle->m_present_queue->presentKHR(present_info);
+            } catch(const vk::OutOfDateKHRError& error) {
+                // most likely the window was resized
+                UND_WARNING << "Swap Chain is out of date (most likely the window was resized)\n    The Swap Chain Extent now needs to be updated as well\n";
+            }
 
-			return m_current_frame;
 		}
 
         int SwapChain::getCurrentImageID() const{
 
             return m_current_image;
         }
-
-        uint32_t SwapChain::beginFrame() {
-
-            int current_frame = getCurrentFrameID();
-
-            // wait for previous frame to finish
-			m_device_handle->waitForFences(1, &m_frame_in_flight->at(current_frame), VK_TRUE, UINT64_MAX);
-			m_device_handle->resetFences(1, &m_frame_in_flight->at(current_frame));
-			
-			// acquire new swap chain image
-            m_current_image = m_device_handle->acquireNextImageKHR(*m_swap_chain, UINT64_MAX,m_image_available->at(current_frame));
-
-            return getCurrentFrameID();
-		}
-
-		void SwapChain::endFrame() {
-		
-			// present the image once the processes using it have finished
-            std::vector<vk::Semaphore> render_finished({m_render_finished->at(m_current_frame)});
-			std::vector<vk::SwapchainKHR> swap_chains({*m_swap_chain});
-			std::vector<uint32_t> image_indices({m_current_image});
-			vk::PresentInfoKHR present_info(render_finished, swap_chains, image_indices);
-
-            try {
-                m_present_queue_handle->presentKHR(present_info);
-            } catch(const vk::OutOfDateKHRError& error) {
-                // most likely the window was resized
-                UND_WARNING << "Swap Chain is out of date (most likely the window was resized)\n    The Swap Chain Extent now needs to be updated as well\n";
-            }
-
-			// increasing the frame counter
-			m_current_frame = (m_current_frame + 1)  % m_max_frames_in_flight;
-		}
 
 
 	} // graphics

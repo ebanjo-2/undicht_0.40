@@ -6,7 +6,6 @@
 #include "core/vulkan/swap_chain.h"
 
 #include "graphics_pipeline/vulkan/shader.h"
-#include "graphics_pipeline/vulkan/render_subpass.h"
 #include "graphics_pipeline/vulkan/vertex_buffer.h"
 #include "graphics_pipeline/vulkan/uniform_buffer.h"
 #include "graphics_pipeline/vulkan/texture.h"
@@ -29,8 +28,8 @@ namespace undicht {
             std::vector<vk::DescriptorSet>* m_shader_descriptors = 0;
 			vk::PipelineLayout* m_layout = 0;
 
-			// subpasses
-			RenderSubpass m_subpass;
+			// subpasses (i think they describe the framebuffer attachments that get written to)
+            vk::SubpassDescription* m_subpass_description = 0;
 
 			// the renderpass
 			vk::RenderPass* m_render_pass = 0;
@@ -50,8 +49,6 @@ namespace undicht {
             std::vector<const UniformBuffer*> m_ubos;
             std::vector<const Texture*> m_textures;
 
-            uint32_t m_max_frames_in_flight = 1;
-            uint32_t m_current_frame = 0;
             std::vector<std::vector<bool>> m_text_updated_for_frame;
             std::vector<std::vector<bool>> m_ubos_updated_for_frame; // ubo_index -> frame_index
 
@@ -60,17 +57,11 @@ namespace undicht {
 			
 			friend GraphicsDevice;
 
-			Renderer(const GraphicsDevice* device);
 
         public:
 
+            Renderer(const GraphicsDevice* device);
             ~Renderer();
-
-        private:
-
-            // destroys all vulkan objects, but keeps the settings
-            // you then can change some of the settings, and link the pipeline once more
-            // to use it again
             void cleanUp();
 
 		public:
@@ -87,7 +78,6 @@ namespace undicht {
             void destroyStaticPipelineObjects();
             void destroyDynamicPipelineObjects();
 
-
             void getTextureAttachments(std::vector<vk::AttachmentDescription>* attachments, std::vector<vk::AttachmentReference>* refs);
 
 			void createRenderPass();
@@ -99,9 +89,6 @@ namespace undicht {
 
 		public:
 			// pipeline settings
-
-            void setMaxFramesInFlight(uint32_t num);
-            void setCurrentFrameID(uint32_t frame);
 
 			void setVertexBufferLayout(const VertexBuffer& vbo_prototype);
             void setShaderInput(uint32_t ubo_count, uint32_t tex_count);

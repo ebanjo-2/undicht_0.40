@@ -24,17 +24,16 @@ int main() {
     GraphicsSurface canvas = graphics_api.createGraphicsSurface(window);
 	GraphicsDevice gpu = graphics_api.getGraphicsDevice(canvas);
 	SwapChain swap_chain = graphics_api.createSwapChain(gpu, canvas);
-	swap_chain.setMaxFramesInFlight(MAX_FRAMES_IN_FLIGHT);
 
 	UND_LOG << "using graphics api: vulkan\n";
 	UND_LOG << "using gpu: " << gpu.info() << " score: " << graphics_api.rateDevice(gpu) << "\n";
 
-	Shader shader = gpu.createShader();
+	Shader shader = gpu.create<Shader>();
 	shader.loadBinaryFile(PROJECT_DIR + "res/vert.spv", UND_VERTEX_SHADER);
 	shader.loadBinaryFile(PROJECT_DIR + "res/frag.spv", UND_FRAGMENT_SHADER);
 	shader.linkStages();
 
-    VertexBuffer vbo = gpu.createVertexBuffer();
+    VertexBuffer vbo = gpu.create<VertexBuffer>();
     vbo.setVertexAttribute(0, UND_VEC3F); // position
     vbo.setVertexAttribute(1, UND_VEC2F); // uv
     vbo.setVertexData({
@@ -49,31 +48,29 @@ int main() {
     vbo.setInstanceData({0.0f, 0.0f}, 0);
     vbo.setInstanceData({0.5f, 0.6f}, 2 * sizeof(float));
 
-	Renderer renderer = gpu.createRenderer();
-    renderer.setMaxFramesInFlight(MAX_FRAMES_IN_FLIGHT);
+	Renderer renderer = gpu.create<Renderer>();
     renderer.setVertexBufferLayout(vbo);
 	renderer.setShader(&shader);
     renderer.setShaderInput(1, 1);
 	renderer.setRenderTarget(&swap_chain);
 	renderer.linkPipeline();
 
-    UniformBuffer uniforms = gpu.createUniformBuffer();
-    uniforms.setMaxFramesInFlight(MAX_FRAMES_IN_FLIGHT); // has an internal buffer for every frame
+    UniformBuffer uniforms = gpu.create<UniformBuffer>();
     uniforms.setAttribute(0, UND_FLOAT32); // time
     uniforms.setAttribute(1, UND_VEC2F); // var
     uniforms.setAttribute(2, UND_VEC4F); // color
     uniforms.finalizeLayout();
 
-    Texture texture = gpu.createTexture();
-    Texture texture2 = gpu.createTexture();
+    Texture texture = gpu.create<Texture>();
+    Texture texture2 = gpu.create<Texture>();
     tools::ImageFile(PROJECT_DIR + "res/Tux.jpg", texture);
     tools::ImageFile(PROJECT_DIR + "res/default_wood.png", texture2);
 
     while(!window.shouldClose()) {
 
 		// begin new frame
-		uint32_t current_frame = swap_chain.beginFrame();
-        renderer.setCurrentFrameID(current_frame);
+        gpu.beginFrame();
+        swap_chain.acquireNextImage();
 
         // updating the uniform buffer
         std::array<float, 4> pos = {0.2f, 0.0f, 0.3f, 0.0f};
@@ -85,7 +82,7 @@ int main() {
         renderer.submit(&vbo);
         renderer.submit(&uniforms, 0);
 
-        if(swap_chain.getCurrentFrameID())
+        if(gpu.getCurrentFrameID())
             renderer.submit(&texture, 1);
         else
             renderer.submit(&texture2, 1);
@@ -93,7 +90,9 @@ int main() {
         renderer.draw();
 
 		// present
-		swap_chain.endFrame();
+		swap_chain.presentImage();
+        gpu.endFrame();
+
         window.update();
 
         // checking for window resize
@@ -110,7 +109,7 @@ int main() {
             window.waitForEvent();
         }
 
-	}
+    }
 
 	gpu.waitForProcessesToFinish();
 
