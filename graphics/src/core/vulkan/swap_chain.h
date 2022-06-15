@@ -14,6 +14,7 @@ namespace undicht {
 		class GraphicsSurface;
 		class Renderer;
 		class GraphicsDevice;
+        class Pipeline;
 
 		class SwapChain {
 
@@ -47,6 +48,7 @@ namespace undicht {
 			// handles for objects needed to update the swap chain
 			friend GraphicsAPI;
 			friend Renderer;
+            friend Pipeline;
             const GraphicsDevice* m_device_handle = 0;
             const GraphicsSurface* m_surface_handle = 0;
 

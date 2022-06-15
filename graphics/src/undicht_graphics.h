@@ -19,6 +19,7 @@
 
 #include "graphics_pipeline/vulkan/shader.h"
 #include "graphics_pipeline/vulkan/renderer.h"
+#include "graphics_pipeline/vulkan/pipeline.h"
 #include "graphics_pipeline/vulkan/vertex_buffer.h"
 #include "graphics_pipeline/vulkan/uniform_buffer.h"
 #include "graphics_pipeline/vulkan/texture.h"

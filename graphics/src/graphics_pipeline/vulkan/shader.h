@@ -13,6 +13,7 @@ namespace undicht {
 
 		class GraphicsDevice;
 		class Renderer;
+        class Pipeline;
 
 		class Shader {
 
@@ -33,6 +34,7 @@ namespace undicht {
 
 			friend GraphicsDevice;
 			friend Renderer;
+            friend Pipeline;
 
 
 		public:

@@ -11,6 +11,7 @@ namespace undicht {
 
     namespace graphics {
 
+        class Pipeline;
         class GraphicsDevice;
         class Renderer;
 
@@ -36,6 +37,7 @@ namespace undicht {
 
             friend GraphicsDevice;
             friend Renderer;
+            friend Pipeline;
 
             const GraphicsDevice* m_device_handle = 0;
 
