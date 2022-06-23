@@ -54,7 +54,21 @@ namespace undicht {
             m_text_updated_for_frame.resize(tex_count, std::vector<bool>(m_device_handle->getMaxFramesInFlight()));
 
             Pipeline::setShaderInput(ubo_count, tex_count);
+
         }
+
+        void Renderer::setRenderTarget(SwapChain* swap_chain) {
+
+            m_swap_chain_handle = swap_chain;
+
+            std::vector<FixedType> attachments;
+            attachments.push_back(translateVulkanFormat(swap_chain->m_format->format));
+
+            Pipeline::setAttachments(attachments);
+            Pipeline::setViewport(swap_chain->getWidth(), swap_chain->getHeight());
+        }
+
+
 
 		void Renderer::linkPipeline() {
 

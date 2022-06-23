@@ -100,7 +100,7 @@ int main() {
             UND_LOG << "resizing window to : " << window.getWidth() << " * " << window.getHeight() << "\n";
             canvas.matchWindowExtent(window);
             swap_chain.matchSurfaceExtent(canvas);
-            renderer.updateRenderTarget(&swap_chain);
+            renderer.setViewport(swap_chain.getWidth(), swap_chain.getHeight());
         }
 
         // checking if the window is minimized

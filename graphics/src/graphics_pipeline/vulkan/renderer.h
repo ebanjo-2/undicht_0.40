@@ -21,6 +21,7 @@ namespace undicht {
 
         protected:
 
+            const SwapChain* m_swap_chain_handle = 0;
 			std::vector<vk::Framebuffer> *m_swap_frame_buffers = 0;
 
 			// command pool
@@ -46,6 +47,7 @@ namespace undicht {
 		public:
 
             void setShaderInput(uint32_t ubo_count, uint32_t tex_count);
+            void setRenderTarget(SwapChain* swap_chain);
 
 			void linkPipeline();
 

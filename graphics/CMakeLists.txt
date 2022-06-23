@@ -38,6 +38,7 @@ set(GRAPHICS_PIPELINE_SOURCES
 		src/graphics_pipeline/vulkan/uniform_buffer.h
 		src/graphics_pipeline/vulkan/texture.h
         src/graphics_pipeline/vulkan/pipeline.h
+        src/graphics_pipeline/vulkan/framebuffer.h
 
 )
 
@@ -57,8 +58,8 @@ add_library(graphics
 		
     ${GRAPHICS_WINDOW_SOURCES}
     ${GRAPHICS_CORE_SOURCES}
-		${GRAPHICS_PIPELINE_SOURCES}
-		${GRAPHICS_USER_INTERFACE_SOURCES}
+	${GRAPHICS_PIPELINE_SOURCES}
+	${GRAPHICS_USER_INTERFACE_SOURCES}
     ${Vulkan_INCLUDE_DIRS}/vulkan/vulkan.hpp
 )
 

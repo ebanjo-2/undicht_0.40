@@ -81,22 +81,25 @@ namespace undicht {
             m_shader_handle = shader;
         }
 
-        void Pipeline::setRenderTarget(SwapChain* swap_chain) {
+        void Pipeline::setViewport(unsigned width, unsigned height) {
 
-            m_swap_chain_handle = swap_chain;
-        }
+            m_view_width = width;
+            m_view_height = height;
 
-        void Pipeline::updateRenderTarget(SwapChain* swap_chain) {
-
-            if(m_swap_chain_handle != swap_chain)
-                UND_WARNING << "submitted a new swap chain to renderer: may cause undefined behaviour (not recommended)\n";
-
-            m_device_handle->m_device->waitIdle();
-
-            destroyDynamicPipelineObjects();
-            initDynamicPipelineObjects();
+            if((*m_pipeline) != (vk::Pipeline)VK_NULL_HANDLE) {
+                // reinitializing the pipeline to update on the changes
+                m_device_handle->m_device->waitIdle();
+                destroyDynamicPipelineObjects();
+                initDynamicPipelineObjects();
+            }
 
         }
+
+        void Pipeline::setAttachments(const std::vector<FixedType>& types) {
+
+            m_attachment_formats = types;
+        }
+
 
         //////////////////////////////////////// initializing the pipeline (public) ///////////////////////////////////
 
@@ -244,18 +247,16 @@ namespace undicht {
             *m_shader_descriptors = m_device_handle->m_device->allocateDescriptorSets(info);
         }
 
-        std::vector<vk::Format> Pipeline::getAttFormats(const SwapChain* swap_chain) const {
+        std::vector<vk::Format> Pipeline::getAttFormats() const {
             // get formats used by the swap chains attachments (images, depth buffer, ...)
 
-            if(!swap_chain) {
-                UND_ERROR << "Failed to determine attachment formats: no swap chain submitted\n";
-                return {};
+            // translating the FixedTypes to vk::Format
+            std::vector<vk::Format> formats;
+            for(const FixedType& t : m_attachment_formats) {
+                formats.push_back(translateVulkanFormat(t));
             }
 
-            // to do: determine the attachments used by the swap chain
-            // is there a depth buffer ?
-
-            return {swap_chain->m_format->format};
+            return formats;
         }
 
         std::vector<vk::AttachmentDescription> Pipeline::createAttachmentDescriptions(const std::vector<vk::Format>& att_formats) const{
@@ -297,7 +298,7 @@ namespace undicht {
         void Pipeline::createRenderPass() {
 
             // declaring which images are used during the rendering
-            std::vector<vk::Format> att_formats = getAttFormats(m_swap_chain_handle);
+            std::vector<vk::Format> att_formats = getAttFormats();
             std::vector<vk::AttachmentDescription> attachments = createAttachmentDescriptions(att_formats);
             std::vector<vk::AttachmentReference> attachment_refs = createAttachmentReferences(attachments);
 
@@ -339,12 +340,9 @@ namespace undicht {
             viewport.setMinDepth(0.0f);
             viewport.setMaxDepth(1.0f);
 
-            if(m_swap_chain_handle) {
-                viewport.setWidth(m_swap_chain_handle->getWidth());
-                viewport.setHeight(m_swap_chain_handle->getHeight());
-            } else {
-                UND_WARNING << "no swap chain submitted\n";
-            }
+            viewport.setWidth(m_view_width);
+            viewport.setHeight(m_view_height);
+
 
             return viewport;
         }
@@ -354,12 +352,7 @@ namespace undicht {
 
             vk::Rect2D scissor;
             scissor.setOffset(vk::Offset2D(0,0));
-
-            if(m_swap_chain_handle) {
-                scissor.setExtent(vk::Extent2D(m_swap_chain_handle->getWidth(), m_swap_chain_handle->getHeight()));
-            } else {
-                UND_WARNING << "no swap chain submitted\n";
-            }
+            scissor.setExtent(vk::Extent2D(m_view_width, m_view_height));
 
             return scissor;
         }

@@ -12,6 +12,7 @@ namespace undicht {
 		const extern int UND_FRAGMENT_SHADER;
 
         vk::Format translateVulkanFormat(const FixedType& t);
+        FixedType translateVulkanFormat(const vk::Format& format);
 
 	} // graphics
 

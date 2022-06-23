@@ -22,7 +22,16 @@ namespace undicht {
             friend GraphicsDevice;
 
         protected:
-            // general info about the pipeline
+            // pipeline settings
+
+            unsigned m_view_width = 0; // viewport size
+            unsigned m_view_height = 0;
+
+            std::vector<FixedType> m_attachment_formats;
+
+
+        protected:
+            // general info about the pipeline (vulkan objects)
 
             // describes buffers that can be used for vertex input
             std::vector<vk::VertexInputBindingDescription>* m_vertex_bindings = 0;
@@ -51,7 +60,6 @@ namespace undicht {
             // handles to objects the pipeline depends on
 
             const GraphicsDevice* m_device_handle = 0;
-            const SwapChain* m_swap_chain_handle = 0;
             const Shader* m_shader_handle = 0;
 
         protected:
@@ -70,8 +78,8 @@ namespace undicht {
             virtual void setVertexBufferLayout(const VertexBuffer& vbo_prototype);
             virtual void setShaderInput(uint32_t ubo_count, uint32_t tex_count);
             virtual void setShader(Shader* shader);
-            virtual void setRenderTarget(SwapChain* swap_chain);
-            virtual void updateRenderTarget(SwapChain* swap_chain);
+            virtual void setViewport(unsigned width, unsigned height);
+            virtual void setAttachments(const std::vector<FixedType>& types);
 
         public:
             // initializing the pipeline
@@ -89,8 +97,8 @@ namespace undicht {
             void createShaderInputDescriptorPool(unsigned ubo_count, unsigned tex_count);
             void createShaderInputDescriptors(unsigned ubo_count, unsigned tex_count);
 
-            // get formats used by the swap chains attachments (images, depth buffer, ...)
-            std::vector<vk::Format> getAttFormats(const SwapChain* swap_chain) const;
+            // get formats used by the attachments (images, depth buffer, ...)
+            std::vector<vk::Format> getAttFormats() const;
             // create descriptions of the textures that are going to be drawn to
             std::vector<vk::AttachmentDescription> createAttachmentDescriptions(const std::vector<vk::Format>& att_formats) const;
             // create references for the attachments that describe the attachments layout

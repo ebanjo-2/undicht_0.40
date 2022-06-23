@@ -12,6 +12,7 @@ namespace undicht {
 
         class GraphicsDevice;
         class Renderer;
+        class Framebuffer;
 
         class Texture {
         protected:
@@ -33,6 +34,7 @@ namespace undicht {
 
             friend GraphicsDevice;
             friend Renderer;
+            friend Framebuffer;
             const GraphicsDevice* m_device_handle = 0;
 
         public:
