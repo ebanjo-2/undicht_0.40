@@ -13,6 +13,7 @@ namespace undicht {
         class GraphicsDevice;
         class Renderer;
         class Framebuffer;
+        class SwapChain;
 
         class Texture {
         protected:
@@ -27,6 +28,11 @@ namespace undicht {
             vk::DeviceMemory* m_memory = 0;
             vk::Sampler* m_sampler = 0;
 
+            // when the texture belongs to the inner workings of vulkan (i.e. the swapchain)
+            // this can be used as a signal that the texture is now accessible
+            vk::Semaphore* m_image_ready = 0;
+            bool m_own_image = true; // if not, the image may not be destroyed by this class
+
             vk::Format* m_format = 0;
             vk::ImageLayout* m_current_layout = 0;
 
@@ -35,12 +41,17 @@ namespace undicht {
             friend GraphicsDevice;
             friend Renderer;
             friend Framebuffer;
+            friend SwapChain;
             const GraphicsDevice* m_device_handle = 0;
 
         public:
 
             Texture(const GraphicsDevice* device);
+            Texture(const Texture& tex);
             ~Texture();
+
+            const Texture& operator=(const Texture& tex);
+
             void cleanUp();
 
         public:

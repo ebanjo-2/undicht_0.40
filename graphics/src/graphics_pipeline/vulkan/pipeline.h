@@ -29,7 +29,6 @@ namespace undicht {
 
             std::vector<FixedType> m_attachment_formats;
 
-
         protected:
             // general info about the pipeline (vulkan objects)
 
@@ -45,16 +44,10 @@ namespace undicht {
             // specifies what descriptors (such as uniform buffers or samplers) are bound to shaders
             std::vector<vk::DescriptorSet>* m_shader_descriptors = 0;
 
+            vk::RenderPass* m_render_pass = 0;
+
             // the object in which the pipeline layout is combined
             vk::PipelineLayout* m_layout = 0;
-
-        protected:
-            // info about how the rendering works
-
-            // tells the driver about the images that are going to be rendered to
-            vk::RenderPass* m_render_pass = 0;
-            // describes the operations that happen for a single attachment
-            vk::SubpassDescription* m_subpass_description = 0;
 
         protected:
             // handles to objects the pipeline depends on
@@ -79,7 +72,7 @@ namespace undicht {
             virtual void setShaderInput(uint32_t ubo_count, uint32_t tex_count);
             virtual void setShader(Shader* shader);
             virtual void setViewport(unsigned width, unsigned height);
-            virtual void setAttachments(const std::vector<FixedType>& types);
+            virtual void setFramebufferLayout(const Framebuffer& fbo); // dont destroy the fbo before the pipeline
 
         public:
             // initializing the pipeline
@@ -96,15 +89,6 @@ namespace undicht {
             void createShaderInputLayout(unsigned ubo_count, unsigned tex_count);
             void createShaderInputDescriptorPool(unsigned ubo_count, unsigned tex_count);
             void createShaderInputDescriptors(unsigned ubo_count, unsigned tex_count);
-
-            // get formats used by the attachments (images, depth buffer, ...)
-            std::vector<vk::Format> getAttFormats() const;
-            // create descriptions of the textures that are going to be drawn to
-            std::vector<vk::AttachmentDescription> createAttachmentDescriptions(const std::vector<vk::Format>& att_formats) const;
-            // create references for the attachments that describe the attachments layout
-            std::vector<vk::AttachmentReference> createAttachmentReferences(const std::vector<vk::AttachmentDescription>& attachments) const;
-
-            void createRenderPass();
 
         protected:
             // getting pipeline setting objects

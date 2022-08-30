@@ -20,13 +20,8 @@ namespace undicht {
             m_shader_layout = new vk::DescriptorSetLayout;
             m_shader_input_descriptor_pool = new vk::DescriptorPool;
             m_shader_descriptors = new std::vector<vk::DescriptorSet>;
-
             m_layout = new vk::PipelineLayout;
-            m_render_pass = new vk::RenderPass;
-            m_subpass_description = new vk::SubpassDescription;
-
             m_pipeline = new vk::Pipeline;
-
 
         }
 
@@ -36,15 +31,10 @@ namespace undicht {
 
             delete m_vertex_bindings;
             delete m_vertex_attributes;
-
             delete m_shader_layout;
             delete m_shader_input_descriptor_pool;
             delete m_shader_descriptors;
-
             delete m_layout;
-            delete m_subpass_description;
-            delete m_render_pass;
-
             delete m_pipeline;
         }
 
@@ -95,9 +85,9 @@ namespace undicht {
 
         }
 
-        void Pipeline::setAttachments(const std::vector<FixedType>& types) {
+        void Pipeline::setFramebufferLayout(const Framebuffer& fbo) {
 
-            m_attachment_formats = types;
+            m_render_pass = fbo.m_render_pass;
         }
 
 
@@ -132,8 +122,6 @@ namespace undicht {
         }
 
         void Pipeline::initDynamicPipelineObjects() {
-
-            createRenderPass();
 
             // info about the fixed pipeline stages
             vk::PipelineVertexInputStateCreateInfo vertex_input = getVertexInputState();
@@ -247,79 +235,6 @@ namespace undicht {
             *m_shader_descriptors = m_device_handle->m_device->allocateDescriptorSets(info);
         }
 
-        std::vector<vk::Format> Pipeline::getAttFormats() const {
-            // get formats used by the swap chains attachments (images, depth buffer, ...)
-
-            // translating the FixedTypes to vk::Format
-            std::vector<vk::Format> formats;
-            for(const FixedType& t : m_attachment_formats) {
-                formats.push_back(translateVulkanFormat(t));
-            }
-
-            return formats;
-        }
-
-        std::vector<vk::AttachmentDescription> Pipeline::createAttachmentDescriptions(const std::vector<vk::Format>& att_formats) const{
-            // create descriptions of the textures that are going to be drawn to
-
-            std::vector<vk::AttachmentDescription> attachments;
-
-            for(int i = 0; i < att_formats.size(); i++) {
-
-                vk::AttachmentDescription attachment({}, att_formats[i], vk::SampleCountFlagBits::e1);
-                attachment.setLoadOp(vk::AttachmentLoadOp::eClear);
-                attachment.setStoreOp(vk::AttachmentStoreOp::eStore);
-                attachment.setStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
-                attachment.setStencilStoreOp(vk::AttachmentStoreOp::eDontCare);
-                attachment.setInitialLayout(vk::ImageLayout::eUndefined);
-                attachment.setFinalLayout(vk::ImageLayout::ePresentSrcKHR);
-
-                attachments.push_back(attachment);
-            }
-
-            return attachments;
-        }
-
-        std::vector<vk::AttachmentReference> Pipeline::createAttachmentReferences(const std::vector<vk::AttachmentDescription>& attachments) const{
-            // create references for the attachments that describe the attachments layout
-
-            std::vector<vk::AttachmentReference> refs;
-
-            for(const vk::AttachmentDescription& description : attachments) {
-                // assuming that all attachments are color attachments for now
-
-                vk::AttachmentReference color_ref(0, vk::ImageLayout::eColorAttachmentOptimal);
-                refs.push_back(color_ref);
-            }
-
-            return refs;
-        }
-
-        void Pipeline::createRenderPass() {
-
-            // declaring which images are used during the rendering
-            std::vector<vk::Format> att_formats = getAttFormats();
-            std::vector<vk::AttachmentDescription> attachments = createAttachmentDescriptions(att_formats);
-            std::vector<vk::AttachmentReference> attachment_refs = createAttachmentReferences(attachments);
-
-            // creating subpasses
-            m_subpass_description->setPipelineBindPoint(vk::PipelineBindPoint::eGraphics);
-            m_subpass_description->setColorAttachments(attachment_refs);
-            std::vector<vk::SubpassDescription> subpasses({*m_subpass_description});
-
-            // declaring the stages the subpass depends on
-            vk::SubpassDependency subpass_dependency(VK_SUBPASS_EXTERNAL, 0);
-            subpass_dependency.setSrcStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput);
-            subpass_dependency.setDstStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput);
-            subpass_dependency.setSrcAccessMask(vk::AccessFlagBits::eNone);
-            subpass_dependency.setDstAccessMask(vk::AccessFlagBits::eColorAttachmentWrite);
-            std::vector<vk::SubpassDependency> subpass_dependencies({subpass_dependency});
-
-            // creating the render pass
-            vk::RenderPassCreateInfo render_pass_info({}, attachments, subpasses, subpass_dependencies);
-            *m_render_pass = m_device_handle->m_device->createRenderPass(render_pass_info);
-
-        }
 
         /////////////////////////////////// getting pipeline setting objects //////////////////////////////////////
 
@@ -379,7 +294,6 @@ namespace undicht {
         void Pipeline::destroyDynamicPipelineObjects() {
 
             m_device_handle->m_device->destroyPipelineLayout(*m_layout);
-            m_device_handle->m_device->destroyRenderPass(*m_render_pass);
             m_device_handle->m_device->destroyPipeline(*m_pipeline);
         }
 

@@ -14,14 +14,32 @@ namespace undicht {
             m_memory = new vk::DeviceMemory;
             m_format = new vk::Format(vk::Format::eR8G8B8A8Srgb);
             m_current_layout = new vk::ImageLayout(vk::ImageLayout::eUndefined);
+            m_image_ready = new vk::Semaphore;
+
+            if(!m_device_handle) return;
 
             initStagingBuffer();
+
+            // init semaphore
+            vk::SemaphoreCreateInfo semaphore_info;
+            *m_image_ready = m_device_handle->m_device->createSemaphore(semaphore_info);
+        }
+
+        Texture::Texture(const Texture& tex) : Texture(0) {
+
+            // copy content
+            m_device_handle = tex.m_device_handle;
+            *m_sampler = *tex.m_sampler;
+            *m_image = *tex.m_image;
+            *m_image_view = *tex.m_image_view;
+            *m_memory = *tex.m_memory;
+            *m_format = *tex.m_format;
+            *m_current_layout = *tex.m_current_layout;
+            *m_image_ready = *tex.m_image_ready;
+
         }
 
         Texture::~Texture() {
-
-            if(!m_device_handle)
-                return;
 
             cleanUp();
 
@@ -31,14 +49,38 @@ namespace undicht {
             delete m_memory;
             delete m_format;
             delete m_current_layout;
+            delete m_image_ready;
+        }
+
+        const Texture& Texture::operator=(const Texture& tex) {
+
+            // protection against self assignment
+            if(this == &tex) return *this;
+
+            // destroy previous content
+            cleanUp();
+
+            // copy content
+            *m_sampler = *tex.m_sampler;
+            *m_image = *tex.m_image;
+            *m_image_view = *tex.m_image_view;
+            *m_memory = *tex.m_memory;
+            *m_format = *tex.m_format;
+            *m_current_layout = *tex.m_current_layout;
+            *m_image_ready = *tex.m_image_ready;
+
+            return *this;
         }
 
         void Texture::cleanUp() {
 
+            if(!m_device_handle) return;
+
             m_device_handle->m_device->destroySampler(*m_sampler);
             m_device_handle->m_device->destroyImageView(*m_image_view);
-            m_device_handle->m_device->destroyImage(*m_image);
+            if(m_own_image) m_device_handle->m_device->destroyImage(*m_image);
             m_device_handle->m_device->freeMemory(*m_memory);
+            m_device_handle->m_device->destroySemaphore(*m_image_ready);
         }
 
         ///////////////////////// specifying the textures layout ///////////////////////////////
@@ -59,24 +101,29 @@ namespace undicht {
 
         void Texture::finalizeLayout() {
 
-            vk::ImageCreateInfo info;
-            info.extent = vk::Extent3D(m_width, m_height, 1);
-            info.imageType = vk::ImageType::e2D;
-            info.arrayLayers = m_layers;
-            info.mipLevels = 1;
-            info.format = *m_format;
-            info.tiling = vk::ImageTiling::eOptimal;
-            info.initialLayout = *m_current_layout;
-            info.usage = vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled;
-            info.sharingMode = vk::SharingMode::eExclusive; // used exclusively by the graphics queue
-            info.samples = vk::SampleCountFlagBits::e1; // used for multisampling
+            if(m_own_image) {
 
-            *m_image = m_device_handle->m_device->createImage(info);
+                vk::ImageCreateInfo info;
+                info.extent = vk::Extent3D(m_width, m_height, 1);
+                info.imageType = vk::ImageType::e2D;
+                info.arrayLayers = m_layers;
+                info.mipLevels = 1;
+                info.format = *m_format;
+                info.tiling = vk::ImageTiling::eOptimal;
+                info.initialLayout = *m_current_layout;
+                info.usage = vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled;
+                info.sharingMode = vk::SharingMode::eExclusive; // used exclusively by the graphics queue
+                info.samples = vk::SampleCountFlagBits::e1; // used for multisampling
 
-            allocate();
+                *m_image = m_device_handle->m_device->createImage(info);
+
+                allocate();
+
+            }
 
             initImageView();
             initSampler();
+
         }
 
         /////////////////////////////  initializing the texture ////////////////////////////////
@@ -106,6 +153,7 @@ namespace undicht {
             info.image = *m_image;
             info.viewType = vk::ImageViewType::e2D;
             info.format = *m_format;
+            info.components = vk::ComponentSwizzle::eIdentity;
             info.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
             info.subresourceRange.baseMipLevel = 0;
             info.subresourceRange.levelCount = 1;

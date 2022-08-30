@@ -16,18 +16,22 @@ namespace undicht {
 	namespace graphics {
 
 		class GraphicsDevice;
+        class SwapChain;
 
 		class Renderer : public Pipeline {
 
         protected:
 
-            const SwapChain* m_swap_chain_handle = 0;
-			std::vector<vk::Framebuffer> *m_swap_frame_buffers = 0;
+            /*const SwapChain* m_swap_chain_handle = 0;
+			std::vector<vk::Framebuffer> *m_swap_frame_buffers = 0;*/
+
+            std::vector<vk::Fence>* m_render_finished = 0;
 
 			// command pool
 			std::vector<vk::CommandBuffer>* m_cmd_buffer = 0;
 
             // currently submitted objects
+            Framebuffer* m_fbo;
             const VertexBuffer* m_vbo = 0;
             std::vector<const UniformBuffer*> m_ubos;
             std::vector<const Texture*> m_textures;
@@ -35,8 +39,8 @@ namespace undicht {
             std::vector<std::vector<bool>> m_text_updated_for_frame;
             std::vector<std::vector<bool>> m_ubos_updated_for_frame; // ubo_index -> frame_index
 
-
 			friend GraphicsDevice;
+            friend SwapChain;
 
         public:
 
@@ -47,20 +51,23 @@ namespace undicht {
 		public:
 
             void setShaderInput(uint32_t ubo_count, uint32_t tex_count);
-            void setRenderTarget(SwapChain* swap_chain);
+            //void setRenderTarget(SwapChain* swap_chain);
+            void setRenderTarget(Framebuffer* fbo);
 
 			void linkPipeline();
 
 		private:
             // functions for creating the renderer
 
-			void createSwapChainFrameBuffers();
+			//void createSwapChainFrameBuffers();
 			void createCommandBuffers();
 
 
         public:
 			// drawing
 
+
+            void submit(Framebuffer* fbo);
             void submit(const VertexBuffer* vbo);
             void submit(UniformBuffer* ubo, uint32_t index);
             void submit(const Texture* tex, uint32_t index); // the texture index starts after the last ubo index

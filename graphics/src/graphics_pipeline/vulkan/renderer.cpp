@@ -17,9 +17,14 @@ namespace undicht {
 
 			// creating the command buffers
 			m_cmd_buffer = new std::vector<vk::CommandBuffer>;
+            m_render_finished = new std::vector<vk::Fence>;
 
 			// creating other member objects
-			m_swap_frame_buffers = new std::vector<vk::Framebuffer>;
+			//m_swap_frame_buffers = new std::vector<vk::Framebuffer>;
+            vk::FenceCreateInfo fence_info(vk::FenceCreateFlagBits::eSignaled); // set initial state as set
+            m_render_finished->resize(device->getMaxFramesInFlight());
+            for(vk::Fence& fence : *m_render_finished)
+                fence = m_device_handle->m_device->createFence(fence_info);
 
 		}
 
@@ -28,8 +33,9 @@ namespace undicht {
             cleanUp();
 
             // actual pipeline objects
-            delete m_swap_frame_buffers;
+            //delete m_swap_frame_buffers;
 			delete m_cmd_buffer;
+            delete m_render_finished;
 
 		}
 
@@ -37,8 +43,11 @@ namespace undicht {
 
             m_device_handle->m_device->waitIdle();
 
-            for(vk::Framebuffer fbo : (*m_swap_frame_buffers))
-                m_device_handle->m_device->destroyFramebuffer(fbo);
+            for(vk::Fence& fence : *m_render_finished)
+                m_device_handle->m_device->destroyFence(fence);
+
+            /*for(vk::Framebuffer fbo : (*m_swap_frame_buffers))
+                m_device_handle->m_device->destroyFramebuffer(fbo);*/
 
         }
 
@@ -57,16 +66,16 @@ namespace undicht {
 
         }
 
-        void Renderer::setRenderTarget(SwapChain* swap_chain) {
+        /*void Renderer::setRenderTarget(SwapChain* swap_chain) {
 
             m_swap_chain_handle = swap_chain;
 
-            std::vector<FixedType> attachments;
-            attachments.push_back(translateVulkanFormat(swap_chain->m_format->format));
+            /*std::vector<FixedType> attachments;
+            attachments.push_back(translateVulkanFormat(swap_chain->m_format->format));*/
 
-            Pipeline::setAttachments(attachments);
+           /* Pipeline::setFramebufferLayout(swap_chain->m_framebuffer);
             Pipeline::setViewport(swap_chain->getWidth(), swap_chain->getHeight());
-        }
+        }*/
 
 
 
@@ -75,14 +84,13 @@ namespace undicht {
             Pipeline::linkPipeline();
 
             createCommandBuffers();
-            createSwapChainFrameBuffers();
-
+            //createSwapChainFrameBuffers();
         }
 
 		///////////////////////////////// private functions for creating the renderer ///////////////////////////////////
 
 
-		void Renderer::createSwapChainFrameBuffers() {
+		/*void Renderer::createSwapChainFrameBuffers() {
             // creating frame buffers to access the swap chain images
 
             m_swap_frame_buffers->resize(m_swap_chain_handle->m_image_count);
@@ -97,12 +105,17 @@ namespace undicht {
 				m_swap_frame_buffers->at(i) = m_device_handle->m_device->createFramebuffer(fbo_info);
 			}
 
-		}
+		}*/
 
 		void Renderer::createCommandBuffers() {
 
-            if(!m_swap_chain_handle) {
+            /*if(!m_swap_chain_handle) {
                 UND_ERROR << "no swap chain was submitted to the renderer\n";
+                return;
+            }*/
+
+            if(!m_fbo) {
+                UND_ERROR << "no framebuffer was submitted to the renderer\n";
                 return;
             }
 
@@ -113,6 +126,14 @@ namespace undicht {
 		}
 
 		/////////////////////////////////////// drawing /////////////////////////////////////
+
+        void Renderer::submit(Framebuffer* fbo) {
+
+            m_fbo = fbo;
+
+            Pipeline::setFramebufferLayout(*m_fbo);
+            Pipeline::setViewport(m_fbo->getWidth(), m_fbo->getHeight());
+        }
 
         void Renderer::submit(const VertexBuffer *vbo) {
 
@@ -176,14 +197,19 @@ namespace undicht {
 
             uint32_t current_frame = m_device_handle->getCurrentFrameID();
 
+            // wait for previous render for this frame to finish
+            m_device_handle->m_device->waitForFences(1, &m_render_finished->at(current_frame), VK_TRUE, UINT64_MAX);
+            m_device_handle->m_device->resetFences(1, &m_render_finished->at(current_frame));
+
             // getting the objects that belong to this frame
             vk::CommandBuffer* cmd = &m_cmd_buffer->at(current_frame);
-            vk::Semaphore* image_ready = &m_swap_chain_handle->m_image_available->at(current_frame);
-            vk::Semaphore* render_finished = &m_swap_chain_handle->m_render_finished->at(current_frame);
-            vk::Fence* render_finished_fence = &m_swap_chain_handle->m_frame_in_flight->at(current_frame);
+            //vk::Semaphore* image_ready = &m_swap_chain_handle->m_image_available->at(current_frame);
+            std::vector<vk::Semaphore> images_ready = m_fbo->getImageReadySemaphores(current_frame);
+            vk::Semaphore* render_finished = &m_fbo->m_render_finished->at(current_frame);
+            vk::Fence* render_finished_fence = &m_render_finished->at(current_frame);
 
             // the semaphores to wait on before drawing to the render target
-            std::vector<vk::Semaphore> wait_on({*image_ready});
+            std::vector<vk::Semaphore> wait_on(images_ready);
 
             // record the command buffer
             recordCommandBuffer(cmd);
@@ -214,8 +240,10 @@ namespace undicht {
         void Renderer::recordCommandBuffer(vk::CommandBuffer* cmd_buffer) {
 
             // getting the framebuffer that gets drawn to
-            int image_index = m_swap_chain_handle->getCurrentImageID();
-            vk::Framebuffer* fbo = &m_swap_frame_buffers->at(image_index);
+            /*int image_index = m_swap_chain_handle->getCurrentImageID();
+            vk::Framebuffer* fbo = &m_swap_frame_buffers->at(image_index);*/
+            int image_index = m_device_handle->getCurrentFrameID();
+            vk::Framebuffer* fbo = &m_fbo->m_frame_buffers->at(image_index);
 
             // viewport size
             vk::Rect2D render_area = getScissor();
@@ -273,7 +301,6 @@ namespace undicht {
 			m_device_handle->m_graphics_queue->submit(1, &submit_info, *render_finished_fence);
 
 		}
-
 
 	} // graphics
 

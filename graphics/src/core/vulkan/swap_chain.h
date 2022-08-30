@@ -2,6 +2,7 @@
 #define SWAP_CHAIN_H
 
 #include "vulkan_declaration.h"
+#include "graphics_pipeline/vulkan/framebuffer.h"
 
 #include "vector"
 #include "cstdint"
@@ -35,15 +36,18 @@ namespace undicht {
 			std::vector<uint32_t> m_queue_ids; // queue families accessing the swap images
 
 			// swap images
-			std::vector<vk::Image>* m_images = 0;
-			std::vector<vk::ImageView>* m_image_views = 0;
+			/*std::vector<vk::Image>* m_images = 0;
+			std::vector<vk::ImageView>* m_image_views = 0;*/
+            std::vector<Texture> m_images;
 			uint32_t m_current_image = 0;
 
-			// sync objects (one for each frame in flight)
-			std::vector<vk::Semaphore>* m_image_available = 0;
-			std::vector<vk::Semaphore>* m_render_finished = 0;
-			std::vector<vk::Fence>* m_frame_in_flight = 0;
+            // the visible framebuffer
+            Framebuffer m_framebuffer;
 
+			// sync objects (one for each frame in flight)
+			/*std::vector<vk::Semaphore>* m_image_available = 0;
+			std::vector<vk::Semaphore>* m_render_finished = 0;
+			std::vector<vk::Fence>* m_frame_in_flight = 0;*/
 			
 			// handles for objects needed to update the swap chain
 			friend GraphicsAPI;
@@ -64,6 +68,7 @@ namespace undicht {
 			void initSwapChain();
             void recreateSwapChain();
             void retrieveSwapImages();
+            void initVisibleFramebuffer();
 
             bool checkDeviceCapabilities(vk::PhysicalDevice* device, vk::SurfaceKHR* surface);
             void chooseSwapImageFormat();
@@ -73,7 +78,7 @@ namespace undicht {
 			bool isFormatSupported(vk::SurfaceFormatKHR* format_khr) const;
 			bool isPresentModeSupported(vk::PresentModeKHR* mode) const;
 			uint32_t findImageCount() const; // determines the amount of images in the swap chain
-            void initSyncObjects();
+            //void initSyncObjects();
 
 		public:
 
@@ -86,8 +91,10 @@ namespace undicht {
 			uint32_t getHeight() const;
 
 			uint32_t acquireNextImage();
-			void presentImage();
+			void presentImage(std::vector<Renderer*> wait_for = {});
             int getCurrentImageID() const;
+
+            Framebuffer& getVisibleFramebuffer();
 
         };
 

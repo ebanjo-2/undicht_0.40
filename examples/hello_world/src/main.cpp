@@ -52,7 +52,7 @@ int main() {
     renderer.setVertexBufferLayout(vbo);
 	renderer.setShader(&shader);
     renderer.setShaderInput(1, 1);
-	renderer.setRenderTarget(&swap_chain);
+	renderer.submit(&swap_chain.getVisibleFramebuffer());
 	renderer.linkPipeline();
 
     UniformBuffer uniforms = gpu.create<UniformBuffer>();
