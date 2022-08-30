@@ -23,6 +23,7 @@ int main() {
 	GraphicsAPI graphics_api;
     GraphicsSurface canvas = graphics_api.createGraphicsSurface(window);
 	GraphicsDevice gpu = graphics_api.getGraphicsDevice(canvas);
+    gpu.setMaxFramesInFlight(MAX_FRAMES_IN_FLIGHT);
 	SwapChain swap_chain = graphics_api.createSwapChain(gpu, canvas);
 
 	UND_LOG << "using graphics api: vulkan\n";
@@ -70,7 +71,9 @@ int main() {
 
 		// begin new frame
         gpu.beginFrame();
-        swap_chain.acquireNextImage();
+        swap_chain.acquireNextImage({&renderer});
+
+        UND_LOG << "current frame id: " << gpu.getCurrentFrameID() << "\n";
 
         // updating the uniform buffer
         std::array<float, 4> pos = {0.2f, 0.0f, 0.3f, 0.0f};

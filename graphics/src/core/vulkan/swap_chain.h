@@ -38,7 +38,7 @@ namespace undicht {
 			// swap images
 			/*std::vector<vk::Image>* m_images = 0;
 			std::vector<vk::ImageView>* m_image_views = 0;*/
-            std::vector<Texture> m_images;
+            std::vector<Texture*> m_images;
 			uint32_t m_current_image = 0;
 
             // the visible framebuffer
@@ -90,8 +90,9 @@ namespace undicht {
 			uint32_t getWidth() const;
 			uint32_t getHeight() const;
 
-			uint32_t acquireNextImage();
-			void presentImage(std::vector<Renderer*> wait_for = {});
+            // before acquiring the image, the previous rendering on that image has to be finished
+			uint32_t acquireNextImage(std::vector<Renderer*> wait_for = {});
+			void presentImage();
             int getCurrentImageID() const;
 
             Framebuffer& getVisibleFramebuffer();

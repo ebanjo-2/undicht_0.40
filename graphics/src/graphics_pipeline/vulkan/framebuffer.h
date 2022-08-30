@@ -27,7 +27,7 @@ namespace undicht {
 
             std::vector<vk::Format>* m_attachment_formats;
             //std::vector<std::vector<vk::ImageView>>* m_attachments; // one vector of attachments for each frame
-            std::vector<std::vector<Texture>> m_attachments; // one vector of attachments for each frame
+            std::vector<std::vector<Texture*>> m_attachments; // one vector of attachments for each frame
             vk::RenderPass* m_render_pass = 0;
             vk::SubpassDescription* m_sub_pass_description = 0;
 

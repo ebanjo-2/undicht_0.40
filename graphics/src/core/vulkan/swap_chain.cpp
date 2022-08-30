@@ -146,19 +146,22 @@ namespace undicht {
 
             std::vector<vk::Image> images = m_device_handle->m_device->getSwapchainImagesKHR(*m_swap_chain);
 
-            m_images.resize(images.size(), Texture(m_device_handle));
+            m_images.resize(images.size(), nullptr);
             /*vk::ComponentMapping mapping; // defaults to vk::ComponentSwizzle::eIdentity for all components (rgba)
             vk::ImageSubresourceRange sub_resource(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1);
             */
 
             for(int i = 0; i < images.size(); i++) {
 
-                m_images.at(i).m_own_image = false;
-                *m_images.at(i).m_image = images.at(i);
+                if(!m_images.at(i))
+                    m_images.at(i) = new Texture(m_device_handle);
 
-                m_images.at(i).setSize(getWidth(), getHeight());
-                m_images.at(i).setFormat(translateVulkanFormat(m_format->format));
-                m_images.at(i).finalizeLayout();
+                m_images.at(i)->m_own_image = false;
+                *m_images.at(i)->m_image = images.at(i);
+
+                m_images.at(i)->setSize(getWidth(), getHeight());
+                m_images.at(i)->setFormat(translateVulkanFormat(m_format->format));
+                m_images.at(i)->finalizeLayout();
 
                 /*vk::ImageViewCreateInfo info({}, m_images->at(i), vk::ImageViewType::e2D, m_format->format, mapping, sub_resource);
                 m_image_views->at(i) = m_device_handle->m_device->createImageView(info);*/
@@ -179,7 +182,7 @@ namespace undicht {
 
             for(int i = 0; i < m_images.size(); i++) {
 
-                m_framebuffer.setAttachment(0, i, m_images.at(i));
+                m_framebuffer.setAttachment(0, i, *m_images.at(i));
             }
 
             m_framebuffer.finalizeLayout();
@@ -335,22 +338,22 @@ namespace undicht {
 			return m_extent->height;
 		}
 
-        uint32_t SwapChain::acquireNextImage() {
+        uint32_t SwapChain::acquireNextImage(std::vector<Renderer*> wait_for) {
 
             // the graphics device advances the frame id
             int current_frame = m_device_handle->getCurrentFrameID();
 
-            /*// wait for previous frame to finish
-			m_device_handle->m_device->waitForFences(1, &m_frame_in_flight->at(current_frame), VK_TRUE, UINT64_MAX);
-			m_device_handle->m_device->resetFences(1, &m_frame_in_flight->at(current_frame));*/
-			
+            // wait for previous frame to finish
+            for(Renderer* r : wait_for)
+                r->beginNewFrame(current_frame);
+
 			// acquire new swap chain image
-            m_current_image = m_device_handle->m_device->acquireNextImageKHR(*m_swap_chain, UINT64_MAX, *m_images.at(current_frame).m_image_ready).value;
+            m_current_image = m_device_handle->m_device->acquireNextImageKHR(*m_swap_chain, UINT64_MAX, *m_images.at(current_frame)->m_image_ready).value;
 
             return m_current_image;
 		}
 
-		void SwapChain::presentImage(std::vector<Renderer*> wait_for) {
+		void SwapChain::presentImage() {
 
             uint32_t current_frame = m_device_handle->getCurrentFrameID();
 		

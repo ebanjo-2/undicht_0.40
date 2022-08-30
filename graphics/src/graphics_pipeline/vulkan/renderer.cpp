@@ -21,10 +21,10 @@ namespace undicht {
 
 			// creating other member objects
 			//m_swap_frame_buffers = new std::vector<vk::Framebuffer>;
-            vk::FenceCreateInfo fence_info(vk::FenceCreateFlagBits::eSignaled); // set initial state as set
+            m_render_started.resize(device->getMaxFramesInFlight());
             m_render_finished->resize(device->getMaxFramesInFlight());
             for(vk::Fence& fence : *m_render_finished)
-                fence = m_device_handle->m_device->createFence(fence_info);
+                fence = m_device_handle->m_device->createFence(vk::FenceCreateInfo());
 
 		}
 
@@ -78,7 +78,6 @@ namespace undicht {
         }*/
 
 
-
 		void Renderer::linkPipeline() {
 
             Pipeline::linkPipeline();
@@ -124,6 +123,23 @@ namespace undicht {
 			*m_cmd_buffer = m_device_handle->m_device->allocateCommandBuffers(allocate_info);
 
 		}
+
+        /////////////////////////  managed by the swap chain /////////////////////////////////
+
+        void Renderer::beginNewFrame(uint32_t frame_id) {
+
+            if(!renderStarted(frame_id))
+                return;
+
+            m_device_handle->m_device->waitForFences(1, &m_render_finished->at(frame_id), VK_TRUE,UINT64_MAX);
+            m_device_handle->m_device->resetFences(1, &m_render_finished->at(frame_id));
+            m_render_started.at(frame_id) = false;
+        }
+
+        bool Renderer::renderStarted(uint32_t frame_id) {
+
+            return m_render_started.at(frame_id);
+        }
 
 		/////////////////////////////////////// drawing /////////////////////////////////////
 
@@ -197,10 +213,6 @@ namespace undicht {
 
             uint32_t current_frame = m_device_handle->getCurrentFrameID();
 
-            // wait for previous render for this frame to finish
-            m_device_handle->m_device->waitForFences(1, &m_render_finished->at(current_frame), VK_TRUE, UINT64_MAX);
-            m_device_handle->m_device->resetFences(1, &m_render_finished->at(current_frame));
-
             // getting the objects that belong to this frame
             vk::CommandBuffer* cmd = &m_cmd_buffer->at(current_frame);
             //vk::Semaphore* image_ready = &m_swap_chain_handle->m_image_available->at(current_frame);
@@ -208,14 +220,13 @@ namespace undicht {
             vk::Semaphore* render_finished = &m_fbo->m_render_finished->at(current_frame);
             vk::Fence* render_finished_fence = &m_render_finished->at(current_frame);
 
-            // the semaphores to wait on before drawing to the render target
-            std::vector<vk::Semaphore> wait_on(images_ready);
-
             // record the command buffer
             recordCommandBuffer(cmd);
 
 			// submit the command buffer
-			submitCommandBuffer(cmd, &wait_on, render_finished, render_finished_fence);
+			submitCommandBuffer(cmd, &images_ready, render_finished, render_finished_fence);
+
+            m_render_started.at(current_frame) = true;
 		}
 
 		/////////////////////////////////////// private draw functions ////////////////////////////

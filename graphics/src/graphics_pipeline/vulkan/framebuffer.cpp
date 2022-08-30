@@ -36,6 +36,10 @@ namespace undicht {
             delete m_render_finished;
             delete m_frame_buffers;
 
+            for(std::vector<Texture*> v : m_attachments)
+                for(Texture* t : v)
+                    delete t;
+
         }
 
         void Framebuffer::cleanUp() {
@@ -82,16 +86,18 @@ namespace undicht {
             // making sure that the Framebuffer has enough capacity for the amount of frames
             if(frame >= m_frame_buffers->size()) {
                 m_attachments.resize(frame + 1);
-                std::cout << "here\n";
                 //m_frame_buffers->resize(frame + 1);
             }
 
             // making sure the attachment vector for the requested frame is big enough
             if(m_attachments.at(frame).size() <= id)
-                m_attachments.at(frame).resize(id + 1, Texture(m_device_handle));
+                m_attachments.at(frame).resize(id + 1, nullptr);
 
             // storing the attachment
-            m_attachments.at(frame).at(id) = att;
+            if(!m_attachments.at(frame).at(id))
+                m_attachments.at(frame).at(id) = new Texture(m_device_handle);
+            *m_attachments.at(frame).at(id) = att;
+            m_attachments.at(frame).at(id)->m_own_image = false;
 
             // storing the attachment format
             if(m_attachment_formats->size() <= id)
@@ -117,7 +123,7 @@ namespace undicht {
 
                 for(int att = 0; att < att_count; att++) {
 
-                    attachments.push_back(*m_attachments.at(frame).at(att).m_image_view);
+                    attachments.push_back(*m_attachments.at(frame).at(att)->m_image_view);
                 }
 
                 vk::FramebufferCreateInfo fbo_info({}, *m_render_pass, attachments);
@@ -226,7 +232,7 @@ namespace undicht {
 
             std::vector<vk::Semaphore> semaphores;
             for(int i = 0; i < m_attachment_formats->size(); i++) {
-                semaphores.push_back(*m_attachments.at(frame).at(i).m_image_ready);
+                semaphores.push_back(*m_attachments.at(frame).at(i)->m_image_ready);
             }
 
             return semaphores;

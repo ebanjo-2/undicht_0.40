@@ -25,6 +25,7 @@ namespace undicht {
             /*const SwapChain* m_swap_chain_handle = 0;
 			std::vector<vk::Framebuffer> *m_swap_frame_buffers = 0;*/
 
+            std::vector<bool> m_render_started;
             std::vector<vk::Fence>* m_render_finished = 0;
 
 			// command pool
@@ -62,10 +63,14 @@ namespace undicht {
 			//void createSwapChainFrameBuffers();
 			void createCommandBuffers();
 
+        public:
+            // managed by the swap chain
+
+            void beginNewFrame(uint32_t frame_id);
+            bool renderStarted(uint32_t frame_id);
 
         public:
 			// drawing
-
 
             void submit(Framebuffer* fbo);
             void submit(const VertexBuffer* vbo);
