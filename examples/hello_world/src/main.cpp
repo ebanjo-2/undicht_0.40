@@ -12,7 +12,7 @@ using namespace graphics;
 
 // root dir of the hello world example
 const std::string PROJECT_DIR = std::string(__FILE__).substr(0, std::string(__FILE__).rfind('/')) + "/../";
-const int MAX_FRAMES_IN_FLIGHT = 2;
+const int MAX_FRAMES_IN_FLIGHT = 3;
 
 int main() {
 
@@ -72,8 +72,6 @@ int main() {
 		// begin new frame
         gpu.beginFrame();
         swap_chain.acquireNextImage({&renderer});
-
-        UND_LOG << "current frame id: " << gpu.getCurrentFrameID() << "\n";
 
         // updating the uniform buffer
         std::array<float, 4> pos = {0.2f, 0.0f, 0.3f, 0.0f};

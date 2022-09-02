@@ -10,6 +10,8 @@
 #include "graphics_pipeline/vulkan/uniform_buffer.h"
 #include "graphics_pipeline/vulkan/texture.h"
 #include "graphics_pipeline/vulkan/pipeline.h"
+#include "graphics_pipeline/vulkan/draw_call.h"
+
 
 namespace undicht {
 
@@ -28,8 +30,8 @@ namespace undicht {
             std::vector<bool> m_render_started;
             std::vector<vk::Fence>* m_render_finished = 0;
 
-			// command pool
-			std::vector<vk::CommandBuffer>* m_cmd_buffer = 0;
+			// draw command buffer
+            DrawCall m_cmd_buffer;
 
             // currently submitted objects
             Framebuffer* m_fbo;
@@ -52,16 +54,9 @@ namespace undicht {
 		public:
 
             void setShaderInput(uint32_t ubo_count, uint32_t tex_count);
-            //void setRenderTarget(SwapChain* swap_chain);
             void setRenderTarget(Framebuffer* fbo);
 
 			void linkPipeline();
-
-		private:
-            // functions for creating the renderer
-
-			//void createSwapChainFrameBuffers();
-			void createCommandBuffers();
 
         public:
             // managed by the swap chain
@@ -78,15 +73,6 @@ namespace undicht {
             void submit(const Texture* tex, uint32_t index); // the texture index starts after the last ubo index
 
 			void draw();
-
-		private:
-
-            void bindVertexBuffer(vk::CommandBuffer* cmd);
-            void bindDescriptorSets(vk::CommandBuffer* cmd);
-
-            void recordCommandBuffer(vk::CommandBuffer* cmd_buffer);
-            void recordDrawCommands(vk::CommandBuffer* cmd_buffer);
-			void submitCommandBuffer(vk::CommandBuffer* cmd_buffer, std::vector<vk::Semaphore>* wait_on, vk::Semaphore* render_finished, vk::Fence* render_finished_fence);
 
 		};
 

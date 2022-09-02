@@ -13,6 +13,7 @@ namespace undicht {
         class Renderer;
         class UniformBuffer;
         class Texture;
+        class DrawCall;
 
         class VramBuffer {
 
@@ -31,6 +32,7 @@ namespace undicht {
             friend Renderer;
             friend UniformBuffer;
             friend Texture;
+            friend DrawCall;
 
             const GraphicsDevice* m_device_handle = 0;
 

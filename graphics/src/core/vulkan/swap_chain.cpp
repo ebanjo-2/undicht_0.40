@@ -20,15 +20,7 @@ namespace undicht {
 			m_device_handle = device;
 			m_surface_handle = surface;
 
-            // initializing sync objects
-            /*m_image_available = new std::vector<vk::Semaphore>;
-            m_render_finished = new std::vector<vk::Semaphore>;
-            m_frame_in_flight = new std::vector<vk::Fence>;*/
-
-            // initializing other vulkan members
             m_extent = new vk::Extent2D;
-            /*m_images = new std::vector<vk::Image>;
-            m_image_views = new std::vector<vk::ImageView>;*/
             m_swap_chain = new vk::SwapchainKHR;
 
             initSwapChain();
@@ -43,12 +35,7 @@ namespace undicht {
             delete m_present_modes;
             delete m_format;
             delete m_present_mode;
-            /*delete m_image_available;
-            delete m_render_finished;
-            delete m_frame_in_flight;*/
             delete m_extent;
-            /*delete m_images;
-            delete m_image_views;*/
             delete m_swap_chain;
 		
 		}
@@ -62,18 +49,6 @@ namespace undicht {
             // waiting for the device to finish whatever it was doing
             // to make sure it isn't using any of the objects that are going to be modified
             m_device_handle->m_device->waitIdle();
-
-            /*for(vk::Semaphore& s : (*m_image_available))
-                m_device_handle->m_device->destroySemaphore(s);
-
-            for(vk::Semaphore& s : (*m_render_finished))
-                m_device_handle->m_device->destroySemaphore(s);
-
-            for(vk::Fence& f : (*m_frame_in_flight))
-                m_device_handle->m_device->destroyFence(f);*/
-
-            /*for(vk::ImageView& image_view : (*m_image_views))
-                m_device_handle->m_device->destroyImageView(image_view);*/
 
             m_device_handle->m_device->destroySwapchainKHR(*m_swap_chain);
         }
@@ -110,9 +85,6 @@ namespace undicht {
             // destroying the old swapchain objects
             cleanUp();
 
-            // creating sync objects
-            //initSyncObjects();
-
             // determining if the swap chain is going to be shared between queue families
             vk::SharingMode sharing;
 
@@ -145,11 +117,7 @@ namespace undicht {
         void SwapChain::retrieveSwapImages() {
 
             std::vector<vk::Image> images = m_device_handle->m_device->getSwapchainImagesKHR(*m_swap_chain);
-
             m_images.resize(images.size(), nullptr);
-            /*vk::ComponentMapping mapping; // defaults to vk::ComponentSwizzle::eIdentity for all components (rgba)
-            vk::ImageSubresourceRange sub_resource(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1);
-            */
 
             for(int i = 0; i < images.size(); i++) {
 
@@ -163,20 +131,11 @@ namespace undicht {
                 m_images.at(i)->setFormat(translateVulkanFormat(m_format->format));
                 m_images.at(i)->finalizeLayout();
 
-                /*vk::ImageViewCreateInfo info({}, m_images->at(i), vk::ImageViewType::e2D, m_format->format, mapping, sub_resource);
-                m_image_views->at(i) = m_device_handle->m_device->createImageView(info);*/
-
             }
-
-            std::vector<float> test;
-            test.resize(3);
-            test.resize(5);
 
         }
 
         void SwapChain::initVisibleFramebuffer() {
-
-
 
             m_framebuffer.changeSize(getWidth(), getHeight());
 
@@ -265,24 +224,6 @@ namespace undicht {
 			return count;
 		}
 
-        /*void SwapChain::initSyncObjects() {
-
-            // creating new sync objects
-            vk::SemaphoreCreateInfo semaphore_info;
-            vk::FenceCreateInfo fence_info(vk::FenceCreateFlagBits::eSignaled); // set initial state as set
-
-            m_image_available->resize(m_device_handle->getMaxFramesInFlight());
-            m_render_finished->resize(m_device_handle->getMaxFramesInFlight());
-            m_frame_in_flight->resize(m_device_handle->getMaxFramesInFlight());
-
-            for(int i = 0; i < m_device_handle->getMaxFramesInFlight(); i++) {
-
-                m_image_available->at(i) = m_device_handle->m_device->createSemaphore(semaphore_info);
-                m_render_finished->at(i) = m_device_handle->m_device->createSemaphore(semaphore_info);
-                m_frame_in_flight->at(i) = m_device_handle->m_device->createFence(fence_info);
-
-            }
-        }*/
 
         ////////////////////////////////////////// swap chain settings /////////////////////////////////////////////////
 
@@ -350,6 +291,8 @@ namespace undicht {
 			// acquire new swap chain image
             m_current_image = m_device_handle->m_device->acquireNextImageKHR(*m_swap_chain, UINT64_MAX, *m_images.at(current_frame)->m_image_ready).value;
 
+            m_framebuffer.setCurrentFrame(m_current_image);
+
             return m_current_image;
 		}
 
@@ -358,10 +301,10 @@ namespace undicht {
             uint32_t current_frame = m_device_handle->getCurrentFrameID();
 		
 			// present the image once the processes using it have finished
-            std::vector<vk::Semaphore> render_finished({m_framebuffer.m_render_finished->at(current_frame)});
+            std::vector<vk::Semaphore> wait_signals({m_framebuffer.m_render_finished->at(current_frame)});
 			std::vector<vk::SwapchainKHR> swap_chains({*m_swap_chain});
 			std::vector<uint32_t> image_indices({m_current_image});
-			vk::PresentInfoKHR present_info(render_finished, swap_chains, image_indices);
+			vk::PresentInfoKHR present_info(wait_signals, swap_chains, image_indices);
 
             try {
                 m_device_handle->m_present_queue->presentKHR(present_info);

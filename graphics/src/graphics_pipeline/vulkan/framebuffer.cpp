@@ -29,7 +29,6 @@ namespace undicht {
 
             cleanUp();
 
-            //delete m_attachments;
             delete m_attachment_formats;
             delete m_sub_pass_description;
             delete m_render_pass;
@@ -39,7 +38,6 @@ namespace undicht {
             for(std::vector<Texture*> v : m_attachments)
                 for(Texture* t : v)
                     delete t;
-
         }
 
         void Framebuffer::cleanUp() {
@@ -54,13 +52,20 @@ namespace undicht {
 
         }
 
+        void Framebuffer::setCurrentFrame(uint32_t frame_id) {
+            // vulkan determines which framebuffer to render to next (use SwapChain.acquireNextImage())
+            // this image might be a different number than the frame id
+
+            m_current_frame = frame_id;
+        }
+
         /////////////////////////////// controlling the framebuffer size ///////////////////////////////
 
         void Framebuffer::changeSize(uint32_t width, uint32_t height) {
 
             m_width = width;
             m_height = height;
-
+            cleanUp();
         }
 
         uint32_t Framebuffer::getWidth() const {
@@ -82,30 +87,23 @@ namespace undicht {
                 return;
             }
 
-
-            // making sure that the Framebuffer has enough capacity for the amount of frames
-            if(frame >= m_frame_buffers->size()) {
+            if(m_attachments.size() <= frame)
                 m_attachments.resize(frame + 1);
-                //m_frame_buffers->resize(frame + 1);
-            }
 
-            // making sure the attachment vector for the requested frame is big enough
             if(m_attachments.at(frame).size() <= id)
                 m_attachments.at(frame).resize(id + 1, nullptr);
 
-            // storing the attachment
-            if(!m_attachments.at(frame).at(id))
+            if(m_attachments.at(frame).at(id) == nullptr)
                 m_attachments.at(frame).at(id) = new Texture(m_device_handle);
-            *m_attachments.at(frame).at(id) = att;
-            m_attachments.at(frame).at(id)->m_own_image = false;
 
-            // storing the attachment format
             if(m_attachment_formats->size() <= id)
                 m_attachment_formats->resize(id + 1);
 
+            *m_attachments.at(frame).at(id) = att;
+            m_attachments.at(frame).at(id)->m_own_image = false;
+
             m_attachment_formats->at(id) = *att.m_format;
 
-            //setAttachment(id, frame, *att.m_image_view, *att.m_format);
         }
 
         bool Framebuffer::finalizeLayout() {
@@ -117,6 +115,7 @@ namespace undicht {
 
             m_frame_buffers->resize(frame_count);
 
+            // attaching the textures to the framebuffer for each frame
             for(int frame = 0; frame < frame_count; frame++) {
 
                 std::vector<vk::ImageView> attachments;
@@ -228,7 +227,13 @@ namespace undicht {
             return refs;
         }
 
-        std::vector<vk::Semaphore> Framebuffer::getImageReadySemaphores(uint32_t frame) const {
+        const vk::Framebuffer* Framebuffer::getCurrentFramebuffer() const{
+
+            return &m_frame_buffers->at(m_current_frame);
+        }
+
+        std::vector<vk::Semaphore> Framebuffer::getImageReadySemaphores(unsigned frame) const {
+            // image ready signals for the current framebuffer
 
             std::vector<vk::Semaphore> semaphores;
             for(int i = 0; i < m_attachment_formats->size(); i++) {

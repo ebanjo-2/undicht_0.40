@@ -20,6 +20,7 @@ namespace undicht {
         class SwapChain;
         class Pipeline;
         class Renderer;
+        class DrawCall;
 
         class Framebuffer {
 
@@ -32,8 +33,9 @@ namespace undicht {
             vk::SubpassDescription* m_sub_pass_description = 0;
 
             std::vector<vk::Semaphore>* m_render_finished; // one for every frame
-
             std::vector<vk::Framebuffer>* m_frame_buffers; // one for every frame
+            unsigned m_current_frame = 0; // vulkan determines which framebuffer to render to next
+            // this image might be a different number than the frame id
 
             unsigned m_width = 0;
             unsigned m_height = 0;
@@ -43,6 +45,7 @@ namespace undicht {
             friend SwapChain;
             friend Pipeline;
             friend Renderer;
+            friend DrawCall;
 
         public:
 
@@ -50,6 +53,10 @@ namespace undicht {
             virtual ~Framebuffer();
 
             void cleanUp();
+
+            // vulkan determines which framebuffer to render to next (use SwapChain.acquireNextImage())
+            // this image might be a different number than the frame id
+            void setCurrentFrame(uint32_t frame_id);
 
         public:
             // controlling the framebuffer size
@@ -80,7 +87,9 @@ namespace undicht {
             // create references for the attachments that describe the attachments layout
             std::vector<vk::AttachmentReference> createAttachmentReferences(const std::vector<vk::AttachmentDescription>& attachments) const;
 
-            std::vector<vk::Semaphore> getImageReadySemaphores(uint32_t frame) const;
+            // get the current framebuffer (might have an id different to the current frame id)
+            const vk::Framebuffer* getCurrentFramebuffer() const;
+            std::vector<vk::Semaphore> getImageReadySemaphores(unsigned frame) const;
 
         };
 

@@ -16,10 +16,12 @@ namespace undicht {
     namespace graphics {
 
         class GraphicsDevice;
+        class DrawCall;
 
         class Pipeline {
 
             friend GraphicsDevice;
+            friend DrawCall;
 
         protected:
             // pipeline settings

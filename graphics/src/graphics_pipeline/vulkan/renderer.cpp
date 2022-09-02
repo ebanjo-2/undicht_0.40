@@ -13,10 +13,9 @@ namespace undicht {
 
 	namespace graphics {
 		
-		Renderer::Renderer(const GraphicsDevice* device) : Pipeline(device){
+		Renderer::Renderer(const GraphicsDevice* device) : Pipeline(device), m_cmd_buffer(device){
 
 			// creating the command buffers
-			m_cmd_buffer = new std::vector<vk::CommandBuffer>;
             m_render_finished = new std::vector<vk::Fence>;
 
 			// creating other member objects
@@ -33,8 +32,6 @@ namespace undicht {
             cleanUp();
 
             // actual pipeline objects
-            //delete m_swap_frame_buffers;
-			delete m_cmd_buffer;
             delete m_render_finished;
 
 		}
@@ -45,9 +42,6 @@ namespace undicht {
 
             for(vk::Fence& fence : *m_render_finished)
                 m_device_handle->m_device->destroyFence(fence);
-
-            /*for(vk::Framebuffer fbo : (*m_swap_frame_buffers))
-                m_device_handle->m_device->destroyFramebuffer(fbo);*/
 
         }
 
@@ -66,63 +60,12 @@ namespace undicht {
 
         }
 
-        /*void Renderer::setRenderTarget(SwapChain* swap_chain) {
-
-            m_swap_chain_handle = swap_chain;
-
-            /*std::vector<FixedType> attachments;
-            attachments.push_back(translateVulkanFormat(swap_chain->m_format->format));*/
-
-           /* Pipeline::setFramebufferLayout(swap_chain->m_framebuffer);
-            Pipeline::setViewport(swap_chain->getWidth(), swap_chain->getHeight());
-        }*/
-
-
 		void Renderer::linkPipeline() {
 
             Pipeline::linkPipeline();
 
-            createCommandBuffers();
-            //createSwapChainFrameBuffers();
         }
 
-		///////////////////////////////// private functions for creating the renderer ///////////////////////////////////
-
-
-		/*void Renderer::createSwapChainFrameBuffers() {
-            // creating frame buffers to access the swap chain images
-
-            m_swap_frame_buffers->resize(m_swap_chain_handle->m_image_count);
-
-			for(int i = 0; i < m_swap_chain_handle->m_image_count; i++) {
-
-				vk::FramebufferCreateInfo fbo_info({}, *m_render_pass, 1, &m_swap_chain_handle->m_image_views->at(i));
-				fbo_info.setWidth(m_swap_chain_handle->getWidth());
-				fbo_info.setHeight(m_swap_chain_handle->getHeight());
-				fbo_info.setLayers( 1);
-
-				m_swap_frame_buffers->at(i) = m_device_handle->m_device->createFramebuffer(fbo_info);
-			}
-
-		}*/
-
-		void Renderer::createCommandBuffers() {
-
-            /*if(!m_swap_chain_handle) {
-                UND_ERROR << "no swap chain was submitted to the renderer\n";
-                return;
-            }*/
-
-            if(!m_fbo) {
-                UND_ERROR << "no framebuffer was submitted to the renderer\n";
-                return;
-            }
-
-            // creating a command buffer for each frame in flight
-			vk::CommandBufferAllocateInfo allocate_info(*m_device_handle->m_graphics_command_pool, vk::CommandBufferLevel::ePrimary, m_device_handle->getMaxFramesInFlight());
-			*m_cmd_buffer = m_device_handle->m_device->allocateCommandBuffers(allocate_info);
-
-		}
 
         /////////////////////////  managed by the swap chain /////////////////////////////////
 
@@ -182,6 +125,9 @@ namespace undicht {
 
         void Renderer::submit(const Texture* tex, uint32_t index) {
 
+            // in the shader the texture is accessed by an index
+            // that comes after the uniform buffers
+            // calculating the actual index of the texture
             index -= m_ubos.size();
 
             if(m_textures.size() <= index) {
@@ -206,111 +152,32 @@ namespace undicht {
 
 		void Renderer::draw() {
 
-            if(!m_vbo) {
-                UND_ERROR << "failed to draw: no vbo submitted\n";
-                return;
-            }
-
             uint32_t current_frame = m_device_handle->getCurrentFrameID();
 
-            // getting the objects that belong to this frame
-            vk::CommandBuffer* cmd = &m_cmd_buffer->at(current_frame);
-            //vk::Semaphore* image_ready = &m_swap_chain_handle->m_image_available->at(current_frame);
-            std::vector<vk::Semaphore> images_ready = m_fbo->getImageReadySemaphores(current_frame);
-            vk::Semaphore* render_finished = &m_fbo->m_render_finished->at(current_frame);
-            vk::Fence* render_finished_fence = &m_render_finished->at(current_frame);
-
-            // record the command buffer
-            recordCommandBuffer(cmd);
-
-			// submit the command buffer
-			submitCommandBuffer(cmd, &images_ready, render_finished, render_finished_fence);
-
-            m_render_started.at(current_frame) = true;
-		}
-
-		/////////////////////////////////////// private draw functions ////////////////////////////
-
-        void Renderer::bindVertexBuffer(vk::CommandBuffer* cmd) {
-
-            // binding the per vertex data
-            cmd->bindVertexBuffers(0, *m_vbo->m_vertex_data.m_buffer, {0});
-
-            // binding the per instance data
-            if(m_vbo->usesInstancing())
-                cmd->bindVertexBuffers(1, *m_vbo->m_instance_data.m_buffer, {0});
-        }
-
-        void Renderer::bindDescriptorSets(vk::CommandBuffer* cmd) {
-
-            cmd->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *m_layout, 0, m_shader_descriptors->at(m_device_handle->getCurrentFrameID()), nullptr);
-
-        }
-
-
-        void Renderer::recordCommandBuffer(vk::CommandBuffer* cmd_buffer) {
-
-            // getting the framebuffer that gets drawn to
-            /*int image_index = m_swap_chain_handle->getCurrentImageID();
-            vk::Framebuffer* fbo = &m_swap_frame_buffers->at(image_index);*/
-            int image_index = m_device_handle->getCurrentFrameID();
-            vk::Framebuffer* fbo = &m_fbo->m_frame_buffers->at(image_index);
-
-            // viewport size
-            vk::Rect2D render_area = getScissor();
-
-            // clear value
+            // defining clear values for the framebuffer
             std::vector<vk::ClearValue> clear_values = {vk::ClearColorValue(std::array<float, 4>({0.05f, 0.05f, 0.05f, 1.0f}))};
 
-            // recording the draw buffer
-            cmd_buffer->reset();
+            // recording the command buffer
+            m_cmd_buffer.beginRenderPass(m_render_pass, m_fbo, &clear_values);
+            m_cmd_buffer.bindPipeline(m_pipeline);
+            m_cmd_buffer.bindVertexBuffer(m_vbo);
+            m_cmd_buffer.bindDescriptorSets(m_layout, &m_shader_descriptors->at(current_frame));
+            m_cmd_buffer.draw(m_vbo->getVertexCount(), m_vbo->usesIndices(), m_vbo->getInstanceCount());
+            m_cmd_buffer.endRenderPass();
 
-            vk::CommandBufferBeginInfo begin_info({}, nullptr);
-            cmd_buffer->begin(begin_info);
+            // signal objects
+            std::vector<vk::Semaphore> wait_signals = m_fbo->getImageReadySemaphores(current_frame);
+            vk::Semaphore* finished_signal = &m_fbo->m_render_finished->at(current_frame); // signaled once rendering is finished
+            vk::Fence* render_finished_fence = &m_render_finished->at(current_frame);
 
-            // beginning the render pass
-            vk::RenderPassBeginInfo render_pass_info(*m_render_pass, *fbo, render_area, clear_values);
-            cmd_buffer->beginRenderPass(render_pass_info, vk::SubpassContents::eInline);
+            // the stages at which to wait on the signals
+            std::vector<vk::PipelineStageFlags> wait_stages(wait_signals.size(), vk::PipelineStageFlagBits::eColorAttachmentOutput); // the stage at which to wait
 
-            // draw commands
-            recordDrawCommands(cmd_buffer);
+            // submitting the command buffer
+            vk::SubmitInfo submit_info(wait_signals, wait_stages, {}, *finished_signal);
+            m_cmd_buffer.submit(m_device_handle->m_graphics_queue, &submit_info, render_finished_fence);
 
-            // ending the render pass
-            cmd_buffer->endRenderPass();
-
-            // finishing the draw buffer
-            cmd_buffer->end();
-        }
-
-        void Renderer::recordDrawCommands(vk::CommandBuffer* cmd_buffer) {
-
-            cmd_buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *m_pipeline);
-            bindVertexBuffer(cmd_buffer);
-            bindDescriptorSets(cmd_buffer);
-
-            if(m_vbo->usesIndices()) {
-                cmd_buffer->bindIndexBuffer(*m_vbo->m_index_data.m_buffer, 0, vk::IndexType::eUint32);
-                cmd_buffer->drawIndexed(m_vbo->getVertexCount(), m_vbo->getInstanceCount(), 0, 0, 0);
-            } else {
-                cmd_buffer->draw(m_vbo->getVertexCount(), m_vbo->getInstanceCount(), 0, 0);
-            }
-
-        }
-
-		void Renderer::submitCommandBuffer(vk::CommandBuffer* cmd_buffer, std::vector<vk::Semaphore>* wait_on, vk::Semaphore* render_finished, vk::Fence* render_finished_fence) {
-
-			// waiting on other processes to finish
-			std::vector<vk::PipelineStageFlags> wait_stages(wait_on->size(), vk::PipelineStageFlagBits::eColorAttachmentOutput); // the stage at which to wait
-
-			// sync object that gets signaled once drawing finishes
-			std::vector<vk::Semaphore> signal_once_finished({*render_finished});
-
-			// the command buffers to submit
-			std::vector<vk::CommandBuffer> cmd_buffers({*cmd_buffer});
-
-			vk::SubmitInfo submit_info(*wait_on, wait_stages, cmd_buffers, signal_once_finished);
-			m_device_handle->m_graphics_queue->submit(1, &submit_info, *render_finished_fence);
-
+            m_render_started.at(current_frame) = true;
 		}
 
 	} // graphics

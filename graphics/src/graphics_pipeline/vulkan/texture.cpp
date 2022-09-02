@@ -237,7 +237,6 @@ namespace undicht {
             vk::CommandPool* cmd_pool = m_device_handle->m_graphics_command_pool;
             vk::CommandBuffer cmd_buffer = m_device_handle->beginSingleTimeCommand(*cmd_pool);
 
-
             vk::ImageMemoryBarrier mem_barrier = genMemBarrier(*m_format, *m_current_layout, new_layout);
             vk::PipelineStageFlagBits start_stage = choosePreBarrierStage(*m_current_layout, new_layout);
             vk::PipelineStageFlagBits wait_stage = chooseWaitStage(*m_current_layout, new_layout);

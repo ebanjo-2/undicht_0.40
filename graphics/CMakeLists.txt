@@ -31,23 +31,23 @@ set(GRAPHICS_WINDOW_SOURCES
 
 set(GRAPHICS_PIPELINE_SOURCES
 
-		src/graphics_pipeline/vulkan/shader.h
-		src/graphics_pipeline/vulkan/renderer.h
-		src/graphics_pipeline/vulkan/vram_buffer.h
-		src/graphics_pipeline/vulkan/vertex_buffer.h
-		src/graphics_pipeline/vulkan/uniform_buffer.h
-		src/graphics_pipeline/vulkan/texture.h
+	src/graphics_pipeline/vulkan/shader.h
+	src/graphics_pipeline/vulkan/renderer.h
+	src/graphics_pipeline/vulkan/vram_buffer.h
+	src/graphics_pipeline/vulkan/vertex_buffer.h
+	src/graphics_pipeline/vulkan/uniform_buffer.h
+	src/graphics_pipeline/vulkan/texture.h
         src/graphics_pipeline/vulkan/pipeline.h
         src/graphics_pipeline/vulkan/framebuffer.h
-
+        src/graphics_pipeline/vulkan/draw_call.h
 )
 
 set(GRAPHICS_USER_INTERFACE_SOURCES
 
-		src/user_interface/font.h
-		src/user_interface/font.cpp
-		src/user_interface/font_renderer.h
-		src/user_interface/font_renderer.cpp
+	src/user_interface/font.h
+	src/user_interface/font.cpp
+	src/user_interface/font_renderer.h
+	src/user_interface/font_renderer.cpp
 
 )
 
