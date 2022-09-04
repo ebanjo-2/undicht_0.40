@@ -71,7 +71,7 @@ namespace undicht {
         public:
             // adding attachments
 
-            void setAttachment(unsigned id, unsigned frame, const Texture& att);
+            void setAttachment(unsigned id, unsigned frame, Texture* att);
             bool finalizeLayout(); // to be called when all attachments are set
 
         protected:
@@ -85,7 +85,9 @@ namespace undicht {
             // create descriptions of the textures that are going to be drawn to
             std::vector<vk::AttachmentDescription> createAttachmentDescriptions(const std::vector<vk::Format>& att_formats) const;
             // create references for the attachments that describe the attachments layout
-            std::vector<vk::AttachmentReference> createAttachmentReferences(const std::vector<vk::AttachmentDescription>& attachments) const;
+            std::vector<vk::AttachmentReference> createColorAttachmentReferences(const std::vector<vk::AttachmentDescription>& attachments) const;
+            vk::AttachmentReference createDepthAttachmentReference(const std::vector<vk::AttachmentDescription>& attachments) const;
+
 
             // get the current framebuffer (might have an id different to the current frame id)
             const vk::Framebuffer* getCurrentFramebuffer() const;

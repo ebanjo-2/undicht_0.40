@@ -52,25 +52,6 @@ namespace undicht {
             delete m_image_ready;
         }
 
-        const Texture& Texture::operator=(const Texture& tex) {
-
-            // protection against self assignment
-            if(this == &tex) return *this;
-
-            // destroy previous content
-            cleanUp();
-
-            // copy content
-            *m_sampler = *tex.m_sampler;
-            *m_image = *tex.m_image;
-            *m_image_view = *tex.m_image_view;
-            *m_memory = *tex.m_memory;
-            *m_format = *tex.m_format;
-            *m_current_layout = *tex.m_current_layout;
-            *m_image_ready = *tex.m_image_ready;
-
-            return *this;
-        }
 
         void Texture::cleanUp() {
 
@@ -78,7 +59,7 @@ namespace undicht {
 
             m_device_handle->m_device->destroySampler(*m_sampler);
             m_device_handle->m_device->destroyImageView(*m_image_view);
-            if(m_own_image) m_device_handle->m_device->destroyImage(*m_image);
+            if(m_own_image)m_device_handle->m_device->destroyImage(*m_image);
             m_device_handle->m_device->freeMemory(*m_memory);
             m_device_handle->m_device->destroySemaphore(*m_image_ready);
         }
@@ -111,14 +92,13 @@ namespace undicht {
                 info.format = *m_format;
                 info.tiling = vk::ImageTiling::eOptimal;
                 info.initialLayout = *m_current_layout;
-                info.usage = vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled;
+                info.usage = chooseImageUsageFlags(m_pixel_type);
                 info.sharingMode = vk::SharingMode::eExclusive; // used exclusively by the graphics queue
                 info.samples = vk::SampleCountFlagBits::e1; // used for multisampling
 
                 *m_image = m_device_handle->m_device->createImage(info);
 
                 allocate();
-
             }
 
             initImageView();
@@ -154,7 +134,7 @@ namespace undicht {
             info.viewType = vk::ImageViewType::e2D;
             info.format = *m_format;
             info.components = vk::ComponentSwizzle::eIdentity;
-            info.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
+            info.subresourceRange.aspectMask = chooseImageAspectFlags(m_pixel_type);
             info.subresourceRange.baseMipLevel = 0;
             info.subresourceRange.levelCount = 1;
             info.subresourceRange.baseArrayLayer = 0;
@@ -352,6 +332,29 @@ namespace undicht {
             region.imageExtent = vk::Extent3D{m_width, m_height, 1};
 
             return region;
+        }
+
+        vk::ImageAspectFlags Texture::chooseImageAspectFlags(const FixedType& format) const {
+
+            if(format.m_type == Type::COLOR_BGRA || format.m_type == Type::COLOR_RGBA)
+                return vk::ImageAspectFlagBits::eColor;
+
+            if(format.m_type == Type::DEPTH_BUFFER || format.m_type == Type::DEPTH_STENCIL_BUFFER)
+                return vk::ImageAspectFlagBits::eDepth;
+
+            return {};
+        }
+
+        vk::ImageUsageFlags Texture::chooseImageUsageFlags(const FixedType& format) const {
+
+            if(format.m_type == Type::COLOR_BGRA || format.m_type == Type::COLOR_RGBA)
+                return vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled;
+
+            if(format.m_type == Type::DEPTH_BUFFER || format.m_type == Type::DEPTH_STENCIL_BUFFER)
+                return vk::ImageUsageFlagBits::eDepthStencilAttachment;
+
+            return {};
+
         }
 
     } // graphics

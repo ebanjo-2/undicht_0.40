@@ -25,7 +25,7 @@ namespace undicht {
 
         //////////////////////////////////////////// recording commands ////////////////////////////////////////////
 
-        void DrawCall::beginRenderPass(const vk::RenderPass* render_pass, const Framebuffer* fbo, std::vector<vk::ClearValue>* clear_values) {
+        void DrawCall::beginRenderPass(const vk::RenderPass* render_pass, const Framebuffer* fbo, std::vector<vk::ClearValue>* clear_values, vk::Extent2D view_port) {
 
             unsigned frame = m_device_handle->getCurrentFrameID();
 
@@ -37,7 +37,7 @@ namespace undicht {
             m_cmd_buffers->at(frame).begin(begin_info);
 
             // beginning the new render pass
-            vk::Rect2D render_area(vk::Offset2D(0,0), vk::Extent2D(fbo->getWidth(), fbo->getHeight()));
+            vk::Rect2D render_area(vk::Offset2D(0,0), view_port);
             vk::RenderPassBeginInfo render_pass_info(*render_pass, *fbo->getCurrentFramebuffer(), render_area, *clear_values);
             m_cmd_buffers->at(frame).beginRenderPass(render_pass_info, vk::SubpassContents::eInline);
 

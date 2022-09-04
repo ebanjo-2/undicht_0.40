@@ -36,18 +36,12 @@ namespace undicht {
 			std::vector<uint32_t> m_queue_ids; // queue families accessing the swap images
 
 			// swap images
-			/*std::vector<vk::Image>* m_images = 0;
-			std::vector<vk::ImageView>* m_image_views = 0;*/
             std::vector<Texture*> m_images;
 			uint32_t m_current_image = 0;
+            Texture m_depth_buffer;
 
             // the visible framebuffer
             Framebuffer m_framebuffer;
-
-			// sync objects (one for each frame in flight)
-			/*std::vector<vk::Semaphore>* m_image_available = 0;
-			std::vector<vk::Semaphore>* m_render_finished = 0;
-			std::vector<vk::Fence>* m_frame_in_flight = 0;*/
 			
 			// handles for objects needed to update the swap chain
 			friend GraphicsAPI;
@@ -78,7 +72,6 @@ namespace undicht {
 			bool isFormatSupported(vk::SurfaceFormatKHR* format_khr) const;
 			bool isPresentModeSupported(vk::PresentModeKHR* mode) const;
 			uint32_t findImageCount() const; // determines the amount of images in the swap chain
-            //void initSyncObjects();
 
 		public:
 

@@ -21,13 +21,13 @@ int main() {
 
     FontRenderer font_renderer = gpu.create<FontRenderer>();
     font_renderer.setVertexBufferLayout(text_data);
-    font_renderer.setRenderTarget(&swap_chain);
+    font_renderer.submit(&swap_chain.getVisibleFramebuffer());
     font_renderer.linkPipeline();
 
     while(!window.shouldClose()) {
 
         gpu.beginFrame();
-        swap_chain.acquireNextImage();
+        swap_chain.acquireNextImage({&font_renderer});
 
         font_renderer.submit(&text_data);
         font_renderer.submit(&font.m_font_map, 0);

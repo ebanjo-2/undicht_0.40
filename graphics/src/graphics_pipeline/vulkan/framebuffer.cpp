@@ -16,7 +16,6 @@ namespace undicht {
 
             m_device_handle = device;
 
-            //m_attachments = new std::vector<std::vector<vk::ImageView>>;
             m_attachment_formats = new std::vector<vk::Format>;
             m_sub_pass_description = new vk::SubpassDescription;
             m_render_pass = new vk::RenderPass;
@@ -35,9 +34,6 @@ namespace undicht {
             delete m_render_finished;
             delete m_frame_buffers;
 
-            for(std::vector<Texture*> v : m_attachments)
-                for(Texture* t : v)
-                    delete t;
         }
 
         void Framebuffer::cleanUp() {
@@ -45,8 +41,14 @@ namespace undicht {
             for(vk::Framebuffer& fbo : *m_frame_buffers)
                 m_device_handle->m_device->destroyFramebuffer(fbo);
 
+            m_frame_buffers->clear();
+
             for(vk::Semaphore& sem : *m_render_finished)
                 m_device_handle->m_device->destroySemaphore(sem);
+
+            m_render_finished->clear();
+
+            m_attachments.clear();
 
             m_device_handle->m_device->destroyRenderPass(*m_render_pass);
 
@@ -80,9 +82,9 @@ namespace undicht {
 
         ///////////////////////////////////// adding attachments //////////////////////////////////
 
-        void Framebuffer::setAttachment(unsigned int id, unsigned frame, const Texture &att) {
+        void Framebuffer::setAttachment(unsigned int id, unsigned frame, Texture *att) {
 
-            if(att.m_width != m_width || att.m_height != m_height) {
+            if(att->m_width != m_width || att->m_height != m_height) {
                 UND_ERROR << "failed to attach texture to framebuffer: texture has wrong size (id = " << id << ") \n";
                 return;
             }
@@ -93,16 +95,11 @@ namespace undicht {
             if(m_attachments.at(frame).size() <= id)
                 m_attachments.at(frame).resize(id + 1, nullptr);
 
-            if(m_attachments.at(frame).at(id) == nullptr)
-                m_attachments.at(frame).at(id) = new Texture(m_device_handle);
-
             if(m_attachment_formats->size() <= id)
                 m_attachment_formats->resize(id + 1);
 
-            *m_attachments.at(frame).at(id) = att;
-            m_attachments.at(frame).at(id)->m_own_image = false;
-
-            m_attachment_formats->at(id) = *att.m_format;
+            m_attachments.at(frame).at(id) = att;
+            m_attachment_formats->at(id) = *att->m_format;
 
         }
 
@@ -135,46 +132,26 @@ namespace undicht {
             }
 
             // init semaphores
-            m_render_finished->resize(frame_count);
-            vk::SemaphoreCreateInfo semaphore_info;
-
-            for(int i = 0; i < frame_count; i++)
-                m_render_finished->at(i) = m_device_handle->m_device->createSemaphore(semaphore_info);
+            for(int i = m_render_finished->size(); i < frame_count; i++) {
+                vk::SemaphoreCreateInfo semaphore_info;
+                m_render_finished->push_back(m_device_handle->m_device->createSemaphore(semaphore_info));
+            }
 
             return true;
         }
-
-        /*void Framebuffer::setAttachment(unsigned int id, unsigned frame, const vk::ImageView &att, const vk::Format& format) {
-
-            if(frame >= m_frame_buffers->size()) {
-                m_attachments->resize(frame + 1);
-                m_render_finished->resize(frame + 1);
-                m_frame_buffers->resize(frame + 1);
-            }
-
-            // storing the image view
-            if(m_attachments->at(frame).size() <= id)
-                m_attachments->at(frame).resize(id + 1);
-
-            m_attachments->at(frame).at(id) = att;
-
-            // storing the attachment format
-            if(m_attachment_formats->size() <= id)
-                m_attachment_formats->resize(id + 1);
-
-            m_attachment_formats->at(id) = format;
-
-        }*/
 
 
         void Framebuffer::createRenderPass() {
 
             std::vector<vk::AttachmentDescription> attachments = createAttachmentDescriptions(*m_attachment_formats);
-            std::vector<vk::AttachmentReference> attachment_refs = createAttachmentReferences(attachments);
+            std::vector<vk::AttachmentReference> color_attachment_refs = createColorAttachmentReferences(attachments);
+            vk::AttachmentReference depth_attachment_ref = createDepthAttachmentReference(attachments);
+
 
             // creating the subpass description
             m_sub_pass_description->setPipelineBindPoint(vk::PipelineBindPoint::eGraphics);
-            m_sub_pass_description->setColorAttachments(attachment_refs);
+            m_sub_pass_description->setColorAttachments(color_attachment_refs);
+            m_sub_pass_description->setPDepthStencilAttachment(&depth_attachment_ref);
             std::vector<vk::SubpassDescription> subpasses({*m_sub_pass_description});
 
             // declaring the stages the subpass depends on
@@ -198,13 +175,27 @@ namespace undicht {
 
             for(int i = 0; i < att_formats.size(); i++) {
 
+                FixedType att_format = translateVulkanFormat(att_formats.at(i));
+
                 vk::AttachmentDescription attachment({}, att_formats[i], vk::SampleCountFlagBits::e1);
-                attachment.setLoadOp(vk::AttachmentLoadOp::eClear);
-                attachment.setStoreOp(vk::AttachmentStoreOp::eStore);
-                attachment.setStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
-                attachment.setStencilStoreOp(vk::AttachmentStoreOp::eDontCare);
-                attachment.setInitialLayout(vk::ImageLayout::eUndefined);
-                attachment.setFinalLayout(vk::ImageLayout::ePresentSrcKHR);
+
+                if(att_format.m_type == Type::COLOR_RGBA || att_format.m_type == Type::COLOR_BGRA) {
+                    attachment.setLoadOp(vk::AttachmentLoadOp::eClear);
+                    attachment.setStoreOp(vk::AttachmentStoreOp::eStore);
+                    attachment.setStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
+                    attachment.setStencilStoreOp(vk::AttachmentStoreOp::eDontCare);
+                    attachment.setInitialLayout(vk::ImageLayout::eUndefined);
+                    attachment.setFinalLayout(vk::ImageLayout::ePresentSrcKHR);
+                }
+
+                if(att_format.m_type == Type::DEPTH_BUFFER || att_format.m_type == Type::DEPTH_STENCIL_BUFFER) {
+                    attachment.setLoadOp(vk::AttachmentLoadOp::eClear);
+                    attachment.setStoreOp(vk::AttachmentStoreOp::eDontCare);
+                    attachment.setStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
+                    attachment.setStencilStoreOp(vk::AttachmentStoreOp::eDontCare);
+                    attachment.setInitialLayout(vk::ImageLayout::eUndefined);
+                    attachment.setFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
+                }
 
                 attachments.push_back(attachment);
             }
@@ -212,19 +203,42 @@ namespace undicht {
             return attachments;
         }
 
-        std::vector<vk::AttachmentReference> Framebuffer::createAttachmentReferences(const std::vector<vk::AttachmentDescription>& attachments) const{
+        std::vector<vk::AttachmentReference> Framebuffer::createColorAttachmentReferences(const std::vector<vk::AttachmentDescription>& attachments) const{
             // create references for the attachments that describe the attachments layout
 
             std::vector<vk::AttachmentReference> refs;
 
-            for(const vk::AttachmentDescription& description : attachments) {
+            for(int i = 0; i < attachments.size(); i++) {
                 // assuming that all attachments are color attachments for now
 
-                vk::AttachmentReference color_ref(0, vk::ImageLayout::eColorAttachmentOptimal);
-                refs.push_back(color_ref);
+                FixedType und_format = translateVulkanFormat(attachments.at(i).format);
+
+                if(und_format.m_type == Type::COLOR_BGRA || und_format.m_type == Type::COLOR_RGBA) {
+                    vk::AttachmentReference color_ref(i, vk::ImageLayout::eColorAttachmentOptimal);
+                    refs.push_back(color_ref);
+                }
+
             }
 
             return refs;
+        }
+
+        vk::AttachmentReference Framebuffer::createDepthAttachmentReference(const std::vector<vk::AttachmentDescription>& attachments) const{
+            // create references for the attachments that describe the attachments layout
+
+            for(int i = 0; i < attachments.size(); i++) {
+                // assuming that all attachments are color attachments for now
+
+                FixedType und_format = translateVulkanFormat(attachments.at(i).format);
+
+                if(und_format.m_type == Type::DEPTH_BUFFER || und_format.m_type == Type::DEPTH_STENCIL_BUFFER) {
+                    vk::AttachmentReference depth_ref(i, vk::ImageLayout::eDepthStencilAttachmentOptimal);
+                    return depth_ref;
+                }
+
+            }
+
+            return {};
         }
 
         const vk::Framebuffer* Framebuffer::getCurrentFramebuffer() const{
@@ -237,7 +251,10 @@ namespace undicht {
 
             std::vector<vk::Semaphore> semaphores;
             for(int i = 0; i < m_attachment_formats->size(); i++) {
-                semaphores.push_back(*m_attachments.at(frame).at(i)->m_image_ready);
+
+                if(!m_attachments.at(frame).at(i)->m_own_image)
+                    semaphores.push_back(*m_attachments.at(frame).at(i)->m_image_ready);
+
             }
 
             return semaphores;

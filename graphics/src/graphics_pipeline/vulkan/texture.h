@@ -50,9 +50,11 @@ namespace undicht {
             Texture(const Texture& tex);
             ~Texture();
 
-            const Texture& operator=(const Texture& tex);
-
             void cleanUp();
+
+        private:
+
+            const Texture& operator=(const Texture& tex);
 
         public:
             // specifying the textures layout
@@ -81,6 +83,9 @@ namespace undicht {
             vk::ImageMemoryBarrier genMemBarrier(vk::Format format, vk::ImageLayout old_layout, vk::ImageLayout new_layout);
             vk::PipelineStageFlagBits choosePreBarrierStage(vk::ImageLayout old_layout, vk::ImageLayout new_layout) const; // the stages that must happen before the layout transition
             vk::PipelineStageFlagBits chooseWaitStage(vk::ImageLayout old_layout, vk::ImageLayout new_layout) const; // at this stage the layout transition will be waited on to finish
+            vk::ImageAspectFlags chooseImageAspectFlags(const FixedType& format) const;
+            vk::ImageUsageFlags chooseImageUsageFlags(const FixedType& format) const;
+
 
 
         public:

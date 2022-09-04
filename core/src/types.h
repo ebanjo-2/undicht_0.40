@@ -10,7 +10,8 @@ namespace undicht {
         FLOAT,
         COLOR_BGRA, // reverse order of channels
         COLOR_RGBA,
-        DEPTH
+        DEPTH_BUFFER,
+        DEPTH_STENCIL_BUFFER,
     };
 
     class FixedType {
@@ -66,6 +67,9 @@ namespace undicht {
 #define UND_VEC3I FixedType(Type::INT, 4, 3)
 #define UND_VEC4I FixedType(Type::INT, 4, 4)
 
+#define UND_MAT3F FixedType(Type::FLOAT, 4, 9)
+#define UND_MAT4F FixedType(Type::FLOAT, 4, 16)
+
 #define UND_R8 FixedType(Type::COLOR_RGBA, 1, 1)
 #define UND_R8G8 FixedType(Type::COLOR_RGBA, 1, 2)
 #define UND_R8G8B8 FixedType(Type::COLOR_RGBA, 1, 3)
@@ -73,6 +77,10 @@ namespace undicht {
 
 #define UND_B8G8R8 FixedType(Type::COLOR_BGRA, 1, 3)
 #define UND_B8G8R8A8 FixedType(Type::COLOR_BGRA, 1, 4)
+
+#define UND_DEPTH32F undicht::FixedType(Type::DEPTH_BUFFER, 4, 1)
+#define UND_DEPTH32f_STENCIL8 undicht::FixedType(Type::DEPTH_STENCIL_BUFFER, 5, 1)
+#define UND_DEPTH24_STENCIL8 undicht::FixedType(Type::DEPTH_STENCIL_BUFFER, 4, 1)
 
 } // namespace undicht
 

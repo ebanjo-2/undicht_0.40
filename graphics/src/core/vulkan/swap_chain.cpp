@@ -15,7 +15,7 @@ namespace undicht {
 	namespace graphics {
 
 		SwapChain::SwapChain(GraphicsDevice* device, GraphicsSurface* surface)
-        : m_framebuffer(device, 0, 0) {
+        : m_framebuffer(device, 0, 0), m_depth_buffer(device) {
 
 			m_device_handle = device;
 			m_surface_handle = surface;
@@ -29,6 +29,9 @@ namespace undicht {
 		SwapChain::~SwapChain() {
 
             cleanUp();
+
+            for(Texture* t : m_images)
+                delete t;
 
             delete m_capabilities;
             delete m_formats;
@@ -121,17 +124,23 @@ namespace undicht {
 
             for(int i = 0; i < images.size(); i++) {
 
-                if(!m_images.at(i))
-                    m_images.at(i) = new Texture(m_device_handle);
+                if(m_images.at(i))
+                    delete m_images.at(i);
 
-                m_images.at(i)->m_own_image = false;
+                m_images.at(i) = new Texture(m_device_handle);
+
                 *m_images.at(i)->m_image = images.at(i);
-
+                m_images.at(i)->m_own_image = false;
                 m_images.at(i)->setSize(getWidth(), getHeight());
                 m_images.at(i)->setFormat(translateVulkanFormat(m_format->format));
                 m_images.at(i)->finalizeLayout();
 
             }
+
+            // initializing the depth buffer
+            m_depth_buffer.setSize(getWidth(), getHeight());
+            m_depth_buffer.setFormat(UND_DEPTH32F);
+            m_depth_buffer.finalizeLayout();
 
         }
 
@@ -141,7 +150,8 @@ namespace undicht {
 
             for(int i = 0; i < m_images.size(); i++) {
 
-                m_framebuffer.setAttachment(0, i, *m_images.at(i));
+                m_framebuffer.setAttachment(0, i, m_images.at(i));
+                m_framebuffer.setAttachment(1, i, &m_depth_buffer); // apparently one depth buffer is enough (according to vulkan-tutorial.com)
             }
 
             m_framebuffer.finalizeLayout();

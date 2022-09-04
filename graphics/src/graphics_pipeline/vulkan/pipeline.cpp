@@ -90,6 +90,13 @@ namespace undicht {
             m_render_pass = fbo.m_render_pass;
         }
 
+        void Pipeline::setDepthTest(bool test, bool write) {
+
+            m_enable_depth_test = test;
+            m_write_depth_values = write;
+        }
+
+
 
         //////////////////////////////////////// initializing the pipeline (public) ///////////////////////////////////
 
@@ -133,6 +140,7 @@ namespace undicht {
             vk::PipelineMultisampleStateCreateInfo multisample({}, vk::SampleCountFlagBits::e1, VK_FALSE, 1.0f, nullptr, VK_FALSE, VK_FALSE);
             vk::PipelineColorBlendAttachmentState color_blend_attachment({}, vk::BlendFactor::eOne, vk::BlendFactor::eZero, vk::BlendOp::eAdd, vk::BlendFactor::eOne, vk::BlendFactor::eZero, vk::BlendOp::eAdd, vk::ColorComponentFlagBits::eA | vk::ColorComponentFlagBits::eB | vk::ColorComponentFlagBits::eG | vk::ColorComponentFlagBits::eR);
             vk::PipelineColorBlendStateCreateInfo color_blending({}, VK_FALSE, vk::LogicOp::eCopy, 1, &color_blend_attachment, {0.0f, 0.0f, 0.0f, 0.0f});
+            vk::PipelineDepthStencilStateCreateInfo depth_stencil = getDepthStencilInfo();
 
             // settings that can be changed later
             std::vector<vk::DynamicState> dynamic_states({vk::DynamicState::eViewport, vk::DynamicState::eLineWidth});
@@ -149,7 +157,7 @@ namespace undicht {
             pipeline_info.setPViewportState(&viewport_state);
             pipeline_info.setPRasterizationState(&rasterizer);
             pipeline_info.setPMultisampleState(&multisample);
-            pipeline_info.setPDepthStencilState(nullptr);
+            pipeline_info.setPDepthStencilState(&depth_stencil);
             pipeline_info.setPColorBlendState(&color_blending);
             pipeline_info.setPDynamicState(nullptr); // optional
 
@@ -280,6 +288,19 @@ namespace undicht {
             pipeline_layout.setLayoutCount = 1;
 
             return pipeline_layout;
+        }
+
+        vk::PipelineDepthStencilStateCreateInfo Pipeline::getDepthStencilInfo() const {
+
+            vk::PipelineDepthStencilStateCreateInfo depth_stencil;
+
+            depth_stencil.depthTestEnable = m_enable_depth_test;
+            depth_stencil.depthWriteEnable = m_write_depth_values;
+            depth_stencil.depthCompareOp = vk::CompareOp::eLess;
+            depth_stencil.depthBoundsTestEnable = VK_FALSE;
+            depth_stencil.stencilTestEnable = VK_FALSE;
+
+            return depth_stencil;
         }
 
         //////////////////////////////////////// destroying the pipeline //////////////////////////////////////////

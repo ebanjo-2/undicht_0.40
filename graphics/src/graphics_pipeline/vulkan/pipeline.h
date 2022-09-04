@@ -29,6 +29,9 @@ namespace undicht {
             unsigned m_view_width = 0; // viewport size
             unsigned m_view_height = 0;
 
+            bool m_write_depth_values = false;
+            bool m_enable_depth_test = false;
+
             std::vector<FixedType> m_attachment_formats;
 
         protected:
@@ -75,6 +78,7 @@ namespace undicht {
             virtual void setShader(Shader* shader);
             virtual void setViewport(unsigned width, unsigned height);
             virtual void setFramebufferLayout(const Framebuffer& fbo); // dont destroy the fbo before the pipeline
+            virtual void setDepthTest(bool test = true, bool write = true);
 
         public:
             // initializing the pipeline
@@ -99,6 +103,7 @@ namespace undicht {
             vk::Viewport getViewport() const;
             vk::Rect2D getScissor() const; // the part of the viewport that gets displayed
             vk::PipelineLayoutCreateInfo getShaderInputLayout() const;
+            vk::PipelineDepthStencilStateCreateInfo getDepthStencilInfo() const;
 
         protected:
             // destroying the pipeline

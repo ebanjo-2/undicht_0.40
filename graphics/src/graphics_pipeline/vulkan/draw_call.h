@@ -30,7 +30,7 @@ namespace undicht {
         public:
             // recording commands
 
-            void beginRenderPass(const vk::RenderPass* render_pass, const Framebuffer* fbo, std::vector<vk::ClearValue>* clear_values); // call this before recording any commands
+            void beginRenderPass(const vk::RenderPass* render_pass, const Framebuffer* fbo, std::vector<vk::ClearValue>* clear_values, vk::Extent2D view_port); // call this before recording any commands
             void endRenderPass();
 
         public:

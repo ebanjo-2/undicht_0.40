@@ -54,7 +54,7 @@ namespace undicht {
 		public:
 
             void setShaderInput(uint32_t ubo_count, uint32_t tex_count);
-            void setRenderTarget(Framebuffer* fbo);
+            //void setRenderTarget(Framebuffer* fbo);
 
 			void linkPipeline();
 

@@ -155,10 +155,12 @@ namespace undicht {
             uint32_t current_frame = m_device_handle->getCurrentFrameID();
 
             // defining clear values for the framebuffer
-            std::vector<vk::ClearValue> clear_values = {vk::ClearColorValue(std::array<float, 4>({0.05f, 0.05f, 0.05f, 1.0f}))};
+            std::vector<vk::ClearValue> clear_values(2);
+            clear_values.at(0).color = vk::ClearColorValue(std::array<float, 4>({0.05f, 0.05f, 0.05f, 1.0f}));
+            clear_values.at(1).depthStencil = vk::ClearDepthStencilValue(1.0f, 0.0f);
 
             // recording the command buffer
-            m_cmd_buffer.beginRenderPass(m_render_pass, m_fbo, &clear_values);
+            m_cmd_buffer.beginRenderPass(m_render_pass, m_fbo, &clear_values, {m_view_width, m_view_height});
             m_cmd_buffer.bindPipeline(m_pipeline);
             m_cmd_buffer.bindVertexBuffer(m_vbo);
             m_cmd_buffer.bindDescriptorSets(m_layout, &m_shader_descriptors->at(current_frame));

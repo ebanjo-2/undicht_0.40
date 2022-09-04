@@ -12,7 +12,7 @@ using namespace graphics;
 
 // root dir of the hello world example
 const std::string PROJECT_DIR = std::string(__FILE__).substr(0, std::string(__FILE__).rfind('/')) + "/../";
-const int MAX_FRAMES_IN_FLIGHT = 3;
+const int MAX_FRAMES_IN_FLIGHT = 2;
 
 int main() {
 
