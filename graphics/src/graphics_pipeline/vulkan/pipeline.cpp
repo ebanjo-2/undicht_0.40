@@ -62,8 +62,8 @@ namespace undicht {
         void Pipeline::setShaderInput(uint32_t ubo_count, uint32_t tex_count) {
 
             createShaderInputLayout(ubo_count, tex_count);
-            createShaderInputDescriptorPool(ubo_count, tex_count);
-            createShaderInputDescriptors(ubo_count, tex_count);
+            createShaderInputDescriptorPool(ubo_count, tex_count, 400);
+            createShaderInputDescriptors(ubo_count, tex_count, 400);
         }
 
         void Pipeline::setShader(Shader* shader) {
@@ -207,13 +207,13 @@ namespace undicht {
 
         }
 
-        void Pipeline::createShaderInputDescriptorPool(unsigned ubo_count, unsigned tex_count) {
+        void Pipeline::createShaderInputDescriptorPool(unsigned ubo_count, unsigned tex_count, unsigned num_draw_calls) {
 
             uint32_t max_frames_in_flight = m_device_handle->getMaxFramesInFlight();
 
             // determining the size of the descriptor pool
-            vk::DescriptorPoolSize ubo_pool_size(vk::DescriptorType::eUniformBuffer, max_frames_in_flight * ubo_count);
-            vk::DescriptorPoolSize tex_pool_size(vk::DescriptorType::eCombinedImageSampler, max_frames_in_flight * tex_count);
+            vk::DescriptorPoolSize ubo_pool_size(vk::DescriptorType::eUniformBuffer, max_frames_in_flight * ubo_count * num_draw_calls);
+            vk::DescriptorPoolSize tex_pool_size(vk::DescriptorType::eCombinedImageSampler, max_frames_in_flight * tex_count * num_draw_calls);
 
             std::vector<vk::DescriptorPoolSize> pool_sizes;
 
@@ -224,23 +224,28 @@ namespace undicht {
                 pool_sizes.push_back(tex_pool_size);
 
             if(pool_sizes.size()) {
-                vk::DescriptorPoolCreateInfo info({}, max_frames_in_flight, pool_sizes, nullptr);
+                vk::DescriptorPoolCreateInfo info({}, max_frames_in_flight * num_draw_calls, pool_sizes, nullptr);
                 *m_shader_input_descriptor_pool = m_device_handle->m_device->createDescriptorPool(info);
             }
 
         }
 
-        void Pipeline::createShaderInputDescriptors(unsigned ubo_count, unsigned tex_count) {
+        void Pipeline::createShaderInputDescriptors(unsigned ubo_count, unsigned tex_count, unsigned num_draw_calls) {
 
             if(!(ubo_count || tex_count)) // no input
                 return;
 
-            std::vector<vk::DescriptorSetLayout> layouts(m_device_handle->getMaxFramesInFlight(), *m_shader_layout);
+            std::vector<vk::DescriptorSetLayout> layouts(m_device_handle->getMaxFramesInFlight() * num_draw_calls, *m_shader_layout);
             vk::DescriptorSetAllocateInfo info(*m_shader_input_descriptor_pool, layouts);
-            info.setDescriptorSetCount(m_device_handle->getMaxFramesInFlight());
+            info.setDescriptorSetCount(m_device_handle->getMaxFramesInFlight() * num_draw_calls);
 
             // allocate descriptor sets (destroyed when the descriptor pool is destroyed)
             *m_shader_descriptors = m_device_handle->m_device->allocateDescriptorSets(info);
+        }
+
+        vk::DescriptorSet* Pipeline::getShaderInputDescriptor(unsigned frame, unsigned draw_call) const {
+
+            return &m_shader_descriptors->at(frame + m_device_handle->getMaxFramesInFlight() * draw_call);
         }
 
 

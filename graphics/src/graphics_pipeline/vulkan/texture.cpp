@@ -166,7 +166,7 @@ namespace undicht {
             *m_sampler = m_device_handle->m_device->createSampler(info);
         }
 
-        void Texture::writeDescriptorSets(const std::vector<vk::DescriptorSet>* shader_descriptors, uint32_t index, uint32_t frame_id) const {
+        void Texture::writeDescriptorSet(vk::DescriptorSet* shader_descriptor, uint32_t index, uint32_t frame_id) const {
 
             vk::DescriptorImageInfo image_info;
             image_info.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
@@ -180,7 +180,7 @@ namespace undicht {
             descriptor_write.descriptorType = vk::DescriptorType::eCombinedImageSampler;
             descriptor_write.descriptorCount = 1;
             descriptor_write.pTexelBufferView = nullptr;
-            descriptor_write.dstSet = shader_descriptors->at(frame_id);
+            descriptor_write.dstSet = *shader_descriptor;
 
             m_device_handle->m_device->updateDescriptorSets(descriptor_write, nullptr);
 

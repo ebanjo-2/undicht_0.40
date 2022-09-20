@@ -16,12 +16,14 @@ namespace undicht {
     namespace graphics {
 
         class GraphicsDevice;
-        class DrawCall;
+        class RenderPass;
+        class Renderer;
 
         class Pipeline {
 
             friend GraphicsDevice;
-            friend DrawCall;
+            friend RenderPass;
+            friend Renderer;
 
         protected:
             // pipeline settings
@@ -92,9 +94,12 @@ namespace undicht {
             void initStaticPipelineObjects();
             void initDynamicPipelineObjects(); // objects that may change after the pipeline was linked
 
+            // used to tell the render pass which textures and uniform buffers are bound for each draw call
+            // since there can be more than one draw call per render pass
+            // you may need more than one descriptor per render pass (one for each change of texture / uniform)
             void createShaderInputLayout(unsigned ubo_count, unsigned tex_count);
-            void createShaderInputDescriptorPool(unsigned ubo_count, unsigned tex_count);
-            void createShaderInputDescriptors(unsigned ubo_count, unsigned tex_count);
+            void createShaderInputDescriptorPool(unsigned ubo_count, unsigned tex_count, unsigned num_draw_calls = 1);
+            void createShaderInputDescriptors(unsigned ubo_count, unsigned tex_count, unsigned num_draw_calls = 1);
 
         protected:
             // getting pipeline setting objects
@@ -104,6 +109,8 @@ namespace undicht {
             vk::Rect2D getScissor() const; // the part of the viewport that gets displayed
             vk::PipelineLayoutCreateInfo getShaderInputLayout() const;
             vk::PipelineDepthStencilStateCreateInfo getDepthStencilInfo() const;
+
+            vk::DescriptorSet* getShaderInputDescriptor(unsigned frame, unsigned draw_call) const;
 
         protected:
             // destroying the pipeline

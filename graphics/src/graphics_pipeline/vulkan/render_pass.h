@@ -12,7 +12,7 @@ namespace undicht {
 
         class Renderer;
 
-        class DrawCall {
+        class RenderPass {
 
             friend Renderer;
 
@@ -20,12 +20,14 @@ namespace undicht {
 
             const GraphicsDevice* m_device_handle = 0;
 
+            // one for each frame
             std::vector<vk::CommandBuffer>* m_cmd_buffers = 0;
+
 
         public:
 
-            DrawCall(const GraphicsDevice* device);
-            virtual ~DrawCall();
+            RenderPass(const GraphicsDevice* device);
+            virtual ~RenderPass();
 
         public:
             // recording commands
@@ -40,6 +42,7 @@ namespace undicht {
             void bindVertexBuffer(const VertexBuffer* vbo);
             void bindDescriptorSets(const vk::PipelineLayout* layout, const vk::DescriptorSet* descriptors);
             void draw(uint32_t vertex_count, bool use_indices = false, uint32_t instances = 1);
+
 
         public:
             // submitting the command buffer onto a queue

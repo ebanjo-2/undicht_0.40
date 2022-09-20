@@ -1,10 +1,10 @@
-#include "draw_call.h"
+#include "render_pass.h"
 
 namespace undicht {
 
     namespace graphics {
 
-        DrawCall::DrawCall(const GraphicsDevice* device) {
+        RenderPass::RenderPass(const GraphicsDevice* device) {
 
             m_device_handle = device;
             m_cmd_buffers = new std::vector<vk::CommandBuffer>;
@@ -16,7 +16,7 @@ namespace undicht {
 
         }
 
-        DrawCall::~DrawCall() {
+        RenderPass::~RenderPass() {
 
             delete m_cmd_buffers;
         }
@@ -25,7 +25,7 @@ namespace undicht {
 
         //////////////////////////////////////////// recording commands ////////////////////////////////////////////
 
-        void DrawCall::beginRenderPass(const vk::RenderPass* render_pass, const Framebuffer* fbo, std::vector<vk::ClearValue>* clear_values, vk::Extent2D view_port) {
+        void RenderPass::beginRenderPass(const vk::RenderPass* render_pass, const Framebuffer* fbo, std::vector<vk::ClearValue>* clear_values, vk::Extent2D view_port) {
 
             unsigned frame = m_device_handle->getCurrentFrameID();
 
@@ -44,7 +44,7 @@ namespace undicht {
             // next the commands should be called
         }
 
-        void DrawCall::endRenderPass() {
+        void RenderPass::endRenderPass() {
 
             unsigned frame = m_device_handle->getCurrentFrameID();
 
@@ -58,14 +58,14 @@ namespace undicht {
 
         //////////////////////////////////////////// commands ////////////////////////////////////////////
 
-        void DrawCall::bindPipeline(const vk::Pipeline* pipe) {
+        void RenderPass::bindPipeline(const vk::Pipeline* pipe) {
 
             unsigned frame = m_device_handle->getCurrentFrameID();
 
             m_cmd_buffers->at(frame).bindPipeline(vk::PipelineBindPoint::eGraphics, *pipe);
         }
 
-        void DrawCall::bindVertexBuffer(const VertexBuffer* vbo) {
+        void RenderPass::bindVertexBuffer(const VertexBuffer* vbo) {
 
             unsigned frame = m_device_handle->getCurrentFrameID();
 
@@ -81,14 +81,14 @@ namespace undicht {
 
         }
 
-        void DrawCall::bindDescriptorSets(const vk::PipelineLayout* layout, const vk::DescriptorSet* descriptors) {
+        void RenderPass::bindDescriptorSets(const vk::PipelineLayout* layout, const vk::DescriptorSet* descriptors) {
 
             unsigned frame = m_device_handle->getCurrentFrameID();
             m_cmd_buffers->at(frame).bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *layout, 0, *descriptors, nullptr);
 
         }
 
-        void DrawCall::draw(uint32_t vertex_count, bool use_indices, uint32_t instances) {
+        void RenderPass::draw(uint32_t vertex_count, bool use_indices, uint32_t instances) {
 
             unsigned frame = m_device_handle->getCurrentFrameID();
 
@@ -102,9 +102,10 @@ namespace undicht {
 
         }
 
+
         /////////////////////////// submitting the command buffer onto a queue //////////////////////////
 
-        void DrawCall::submit(vk::Queue* queue, vk::SubmitInfo* info, vk::Fence* finished_fence) {
+        void RenderPass::submit(vk::Queue* queue, vk::SubmitInfo* info, vk::Fence* finished_fence) {
 
             unsigned frame = m_device_handle->getCurrentFrameID();
 

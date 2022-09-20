@@ -53,7 +53,7 @@ int main() {
     renderer.setVertexBufferLayout(vbo);
 	renderer.setShader(&shader);
     renderer.setShaderInput(1, 1);
-	renderer.submit(&swap_chain.getVisibleFramebuffer());
+	renderer.setFramebufferLayout(swap_chain.getVisibleFramebuffer());
 	renderer.linkPipeline();
 
     UniformBuffer uniforms = gpu.create<UniformBuffer>();
@@ -80,7 +80,7 @@ int main() {
         uniforms.setData(2, pos.data(), pos.size() * sizeof(float));
 
 		// draw
-        renderer.submit(&vbo);
+        renderer.beginRenderPass(&swap_chain.getVisibleFramebuffer());
         renderer.submit(&uniforms, 0);
 
         if(gpu.getCurrentFrameID())
@@ -88,7 +88,10 @@ int main() {
         else
             renderer.submit(&texture2, 1);
 
-        renderer.draw();
+        renderer.draw(&vbo);
+        renderer.endRenderPass();
+
+
 
 		// present
 		swap_chain.presentImage();

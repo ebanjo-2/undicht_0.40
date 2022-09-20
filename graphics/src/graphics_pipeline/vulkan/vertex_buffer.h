@@ -14,7 +14,7 @@ namespace undicht {
         class Pipeline;
         class GraphicsDevice;
         class Renderer;
-        class DrawCall;
+        class RenderPass;
 
         class VertexBuffer {
 
@@ -39,7 +39,7 @@ namespace undicht {
             friend GraphicsDevice;
             friend Renderer;
             friend Pipeline;
-            friend DrawCall;
+            friend RenderPass;
 
             const GraphicsDevice* m_device_handle = 0;
 

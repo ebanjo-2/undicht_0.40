@@ -20,7 +20,7 @@ namespace undicht {
         class SwapChain;
         class Pipeline;
         class Renderer;
-        class DrawCall;
+        class RenderPass;
 
         class Framebuffer {
 
@@ -45,7 +45,7 @@ namespace undicht {
             friend SwapChain;
             friend Pipeline;
             friend Renderer;
-            friend DrawCall;
+            friend RenderPass;
 
         public:
 

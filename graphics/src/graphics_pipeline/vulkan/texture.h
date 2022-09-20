@@ -72,7 +72,7 @@ namespace undicht {
             void initSampler();
 
             // tells the descriptors that this texture will be accessed in the shader under the index
-            void writeDescriptorSets(const std::vector<vk::DescriptorSet>* shader_descriptors, uint32_t index, uint32_t frame_id) const;
+            void writeDescriptorSet(vk::DescriptorSet* shader_descriptor, uint32_t index, uint32_t frame_id) const;
 
             void allocate();
 

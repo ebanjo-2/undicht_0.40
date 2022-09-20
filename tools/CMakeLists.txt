@@ -18,7 +18,22 @@ add_library("tools"
 	src/3D/camera/camera_3d.cpp
 	src/3D/camera/perspective_camera_3d.h
 	src/3D/camera/perspective_camera_3d.cpp
-
+	
+	src/xml/xml_tag_attribute.h
+	src/xml/xml_tag_attribute.cpp
+	src/xml/xml_file.h
+	src/xml/xml_file.cpp
+	src/xml/xml_element.h
+	src/xml/xml_element.cpp
+	
+	src/model_loading/model_loader.h
+	src/model_loading/model_loader.cpp
+	src/model_loading/collada/collada_file.h
+	src/model_loading/collada/collada_file.cpp
+	
+	src/file_tools.h
+	src/file_tools.cpp
+	
 	extern/stb_implementation.cpp
 )
 

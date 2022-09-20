@@ -1,6 +1,8 @@
 #include "iostream"
 #include "undicht_graphics.h"
 #include "3D/camera/perspective_camera_3d.h"
+#include "model_loading/collada/collada_file.h"
+#include "debug.h"
 
 using namespace undicht;
 using namespace graphics;
@@ -11,29 +13,57 @@ const std::string PROJECT_DIR = std::string(__FILE__).substr(0, std::string(__FI
 
 int main() {
 
+    UND_LOG << "Started the Application\n";
+
     // setting up a window that can be drawn to
     WindowAPI window_api;
-    Window window("Sponza Test Scene", 1200, 1000);
+    Window window("Sponza Test Scene", 1200, 900);
     GraphicsAPI graphics_api;
     GraphicsSurface canvas = graphics_api.createGraphicsSurface(window);
     GraphicsDevice gpu = graphics_api.getGraphicsDevice(canvas);
     SwapChain swap_chain = graphics_api.createSwapChain(gpu, canvas);
 
     // loading the sponza model
-    VertexBuffer vbo = gpu.create<VertexBuffer>();
-    vbo.setVertexAttribute(0, UND_VEC3F); // position
-    vbo.setVertexAttribute(1, UND_VEC2F); // uv
-    vbo.setVertexData({
-            -0.5f,-0.5f, 0.0f,  0.0f, 1.0f, // top left
-            0.5f,-0.5f, 0.0f,  1.0f, 1.0f, // top right
-            0.5f, 0.0f, 0.0f,  1.0f, 0.0f, // bottom right
-            -0.5f, 0.0f, 0.0f,  0.0f, 0.0f, // bottom left
-            -1.5f,-0.5f, -1.0f,  0.0f, 1.0f, // top left
-            1.5f,-0.5f, -1.0f,  1.0f, 1.0f, // top right
-            1.5f, 0.0f, -1.0f,  1.0f, 0.0f, // bottom right
-            -1.5f, 0.0f, -1.0f,  0.0f, 0.0f, // bottom left
-    });
-    vbo.setIndexData({0, 1, 2, 2, 3, 0, 4, 5, 6, 6, 7, 4});
+    std::vector<MeshData> meshes;
+    std::vector<ImageData> images;
+
+    ColladaFile model_file(PROJECT_DIR + "res/sponza_collada/sponza.dae");
+    model_file.loadAllMeshes(meshes);
+    model_file.loadAllTextures(images);
+
+    UND_LOG << "loaded " << meshes.size() << " meshes + " << images.size() << " textures\n";
+
+    // loading the model to the gpu
+    std::vector<VertexBuffer*> vbos(meshes.size(), nullptr);
+    std::vector<Texture*> textures(images.size(), nullptr);
+
+    for(int i = 0; i < meshes.size(); i++) {
+        MeshData& mesh = meshes.at(i);
+        vbos.at(i) = new VertexBuffer(gpu.create<VertexBuffer>());
+        vbos.at(i)->setVertexAttribute(0, UND_VEC3F); // position
+        vbos.at(i)->setVertexAttribute(1, UND_VEC2F); // uv
+        vbos.at(i)->setVertexAttribute(2, UND_VEC3F); // normal
+        vbos.at(i)->setVertexData(mesh.vertices);
+    }
+
+    for(int i = 0; i < images.size(); i++) {
+        ImageData& image = images.at(i);
+        textures.at(i) = new Texture(gpu.create<Texture>());
+        if(image._nr_channels && image._width && image._height) {
+            textures.at(i)->setSize(image._width, image._height);
+            textures.at(i)->setFormat(FixedType(Type::COLOR_BGRA, 1, image._nr_channels));
+            textures.at(i)->finalizeLayout();
+            textures.at(i)->setData(image._pixels.data(), image._pixels.size());
+        } else { // texture is missing
+            int color_data = 0xFF00A000;
+            textures.at(i)->setSize(1, 1);
+            textures.at(i)->setFormat(FixedType(Type::COLOR_BGRA, 1, 4));
+            textures.at(i)->finalizeLayout();
+            textures.at(i)->setData((char*)&color_data, sizeof(color_data));
+        }
+    }
+
+    UND_LOG << "finished transferring the model to the gpu\n";
 
     // setting up a 3D renderer
     Shader shader = gpu.create<Shader>();
@@ -42,10 +72,10 @@ int main() {
     shader.linkStages();
 
     Renderer renderer = gpu.create<Renderer>();
-    renderer.setVertexBufferLayout(vbo);
+    renderer.setVertexBufferLayout(*vbos.at(0));
     renderer.setShader(&shader);
     renderer.setShaderInput(1, 1);
-    renderer.submit(&swap_chain.getVisibleFramebuffer());
+    renderer.setFramebufferLayout(swap_chain.getVisibleFramebuffer());
     renderer.setDepthTest(true, true);
     renderer.linkPipeline();
 
@@ -55,6 +85,8 @@ int main() {
     uniforms.finalizeLayout();
 
     PerspectiveCamera3D cam;
+    cam.setAxesRotation({180.0f, 0.0f, 90.0f});
+    cam.setPosition(glm::vec3(0.0f, 10.0f, 0.0f));
 
     // main loop
     while(!window.shouldClose()) {
@@ -63,16 +95,20 @@ int main() {
         swap_chain.acquireNextImage({&renderer});
 
         // moving the camera
-        cam.setPosition(cam.getPosition() + glm::vec3(0.0f, 0.0f, 0.01f));
+        cam.setPosition(cam.getPosition() + glm::vec3(0.1f, 0.0f, 0.0f));
 
         // updating the ubo
         uniforms.setData(0, glm::value_ptr(cam.getCameraProjectionMatrix()), 16 * sizeof(float));
         uniforms.setData(1, glm::value_ptr(cam.getViewMatrix()), 16 * sizeof(float));
 
         // drawing
-        renderer.submit(&uniforms, 0);
-        renderer.submit(&vbo);
-        renderer.draw();
+        renderer.beginRenderPass(&swap_chain.getVisibleFramebuffer());
+        for(int i = 0; i < meshes.size(); i++) {
+            renderer.submit(textures.at(meshes.at(i).color_texture), 1);
+            renderer.submit(&uniforms, 0);
+            renderer.draw(vbos.at(i));
+        }
+        renderer.endRenderPass();
 
         swap_chain.presentImage();
         gpu.endFrame();
@@ -81,6 +117,12 @@ int main() {
     }
 
     gpu.waitForProcessesToFinish();
+
+    for(VertexBuffer* vbo : vbos)
+        delete vbo;
+
+    for(Texture* texture : textures)
+        delete texture;
 
     return 0;
 }

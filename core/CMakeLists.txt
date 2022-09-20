@@ -9,6 +9,7 @@ src/buffer_layout.h
 src/buffer_layout.cpp
 
 src/debug.h
+src/debug.cpp
 
 src/memory_watcher.h
 src/memory_watcher.cpp

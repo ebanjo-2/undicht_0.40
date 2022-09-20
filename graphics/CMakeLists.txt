@@ -39,7 +39,7 @@ set(GRAPHICS_PIPELINE_SOURCES
 	src/graphics_pipeline/vulkan/texture.h
         src/graphics_pipeline/vulkan/pipeline.h
         src/graphics_pipeline/vulkan/framebuffer.h
-        src/graphics_pipeline/vulkan/draw_call.h
+        src/graphics_pipeline/vulkan/render_pass.h
 )
 
 set(GRAPHICS_USER_INTERFACE_SOURCES

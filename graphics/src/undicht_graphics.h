@@ -25,7 +25,7 @@
 #include "graphics_pipeline/vulkan/texture.h"
 #include "graphics_pipeline/vulkan/pipeline.h"
 #include "graphics_pipeline/vulkan/framebuffer.h"
-#include "graphics_pipeline/vulkan/draw_call.h"
+#include "graphics_pipeline/vulkan/render_pass.h"
 #endif // USE_VULKAN
 
 #include "user_interface/font.h"

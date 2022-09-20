@@ -86,7 +86,7 @@ namespace undicht {
 
         }
 
-        void UniformBuffer::writeDescriptorSets(const std::vector<vk::DescriptorSet>* shader_descriptors, uint32_t index, uint32_t frame_id) const {
+        void UniformBuffer::writeDescriptorSet(vk::DescriptorSet* shader_descriptor, uint32_t index, uint32_t frame_id) const {
             /// @param count max number of frames in flight
 
             // tell the descriptor sets about the buffers
@@ -103,7 +103,7 @@ namespace undicht {
             descriptor_write.descriptorCount = 1;
             descriptor_write.pImageInfo = nullptr;
             descriptor_write.pTexelBufferView = nullptr;
-            descriptor_write.dstSet = shader_descriptors->at(frame_id);
+            descriptor_write.dstSet = *shader_descriptor;
 
             m_device_handle->m_device->updateDescriptorSets(descriptor_write, nullptr);
 

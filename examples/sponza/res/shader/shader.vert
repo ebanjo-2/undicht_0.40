@@ -15,6 +15,6 @@ layout (location = 0) out vec2 uv;
 void main() {
 
     uv = aUV;
-    gl_Position = ubo.proj * ubo.view * vec4(aPos, 1.0);
+    gl_Position = ubo.proj * ubo.view * vec4(aPos * 0.1, 1.0);
 
 }

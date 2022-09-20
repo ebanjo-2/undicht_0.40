@@ -41,7 +41,7 @@ namespace undicht {
             void initBuffers(uint32_t count);
             void initMemoryOffsets();
 
-            void writeDescriptorSets(const std::vector<vk::DescriptorSet>* shader_descriptors, uint32_t index, uint32_t frame_id) const;
+            void writeDescriptorSet(vk::DescriptorSet* shader_descriptor, uint32_t index, uint32_t frame_id) const;
             void updateBuffer(uint32_t current_frame);
 
         public:

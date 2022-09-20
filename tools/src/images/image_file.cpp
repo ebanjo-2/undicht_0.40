@@ -30,6 +30,7 @@ namespace undicht {
 
             uint32_t image_size = data._width * data._height * 4;
             data._pixels.insert(data._pixels.begin(), tmp, tmp + image_size);
+            data._nr_channels = 4;
 
             stbi_image_free(tmp);
 
